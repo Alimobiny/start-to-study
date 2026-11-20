@@ -85,11 +85,16 @@ The latest print schedule artifacts produced earlier in the project are also ava
 Files in this package:
 
 - `index.html` — merged dashboard + Stage A schedule editor and in-page reminder engine.
-- `run_dashboard.py` — local HTTP server using Python Standard Library, bound only to `127.0.0.1:8765`.
-- `اجرای_داشبورد.bat` — Windows launcher.
+- `run_dashboard.py` — local HTTP server using Python Standard Library, bound only to `127.0.0.1:8765`. Restored on 2026-11-20 (it was missing from the export that reached this machine, which broke the launcher); supports `--no-browser` for automated checks, and reuses an already-running instance instead of erroring.
+- `اجرای_داشبورد.bat` — Windows launcher (unchanged; calls `py run_dashboard.py`).
+- `tests/run-tests.mjs` — reproducible Node-only regression suite: extracts the inline script, runs `node --check`, executes it in a `vm` sandbox with DOM/localStorage shims and a controllable clock, and asserts shift/reminder logic. No browser, no downloads, ~1 s.
+- `run_tests.bat` — one-click Windows runner for the suite.
+- `.gitignore` — version-control exclusions (Python cache, test tmp, `node_modules/`, tooling workspace).
 - `README_FA.md` — Persian setup/use guide.
 - `PROJECT_HANDOFF.md` — this project context.
 - `TEST_REPORT.md` — test record.
+
+**Version control:** the folder is now a git repository. Commit 1 = baseline of the delivered Stage A package; commit 2 = the infrastructure repair above. `index.html` was not modified in that repair.
 
 ### Reminder UI per activity
 
@@ -149,7 +154,14 @@ UI additions:
 
 ## 9. Current tests
 
-Automated Chromium test report: **19/19 passed**.
+Two layers:
+
+1. **Local reproducible suite (run before/after every change):**
+   `node tests/run-tests.mjs` — **14/14 passed** on the user's Windows machine (2026-11-20).
+   Covers script syntax, initial state shape, all seven shift intervals incl. overnight spans,
+   end-exclusive boundaries, free-interval checks, reminder firing/dedup/shift-suppression/
+   done-skip/global-pause, backup schemaVersion-3 payload, and persistence round-trip.
+2. **Prior browser-level run (container, 2026-11):** **19/19 passed** — details in `TEST_REPORT.md`.
 
 Covered:
 
@@ -209,9 +221,9 @@ Before changing the project:
 2. Inspect current `index.html`; do not assume older versions are equivalent.
 3. Preserve the user's locked schedule and UI behavior.
 4. Make one small scoped change at a time.
-5. Run `node --check` on extracted inline JavaScript.
-6. Run browser interaction tests for the changed path and critical regressions.
+5. Run the local suite: `node tests/run-tests.mjs` (it includes the `node --check` syntax pass). All green before and after the change.
+6. Commit each scoped change to the git repository with a clear message; never rewrite the baseline commit.
 7. Update `TEST_REPORT.md` and this handoff.
-8. Export a new ZIP and individual files with exact verified paths.
+8. If the user asks for a delivery ZIP, export it after tests and commit are green.
 
 User prefers incremental work and explicit tradeoffs. Do not propose doing the entire architecture in one large task.

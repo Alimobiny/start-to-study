@@ -1,0 +1,15 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Node / test artifacts
+node_modules/
+tests/tmp/
+*.tmp
+
+# Tooling workspace
+.zcode/
+
+# Local-only exports that should not enter history
+*.zip
+!B_NAZANIN.zip

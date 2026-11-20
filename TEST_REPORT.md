@@ -1,5 +1,39 @@
 # TEST REPORT — Stage A Reminder Engine
 
+## Local reproducible suite (current)
+
+**Release:** development-infrastructure repair session  
+**Runner:** Node.js 24 (vm sandbox, no browser, no downloads)  
+**Command:** `node tests/run-tests.mjs` (or double-click `run_tests.bat`)  
+**Timezone:** logic exercised at fixed Asia/Tehran instants via a controllable clock  
+**Result:** 14 / 14 PASS — verified on the user's Windows machine (2026-11-20)
+
+| Test | Result |
+|---|---|
+| Inline script passes `node --check` | PASS |
+| Initial state: 16 tasks across the four zones, reminders on | PASS |
+| `civilMinute` / `dayIxFromIso` arithmetic sanity | PASS |
+| All seven shift rules exist with exact intervals | PASS |
+| Saturday Sina and Sunday Parsian shifts cross midnight | PASS |
+| Shift boundaries are end-exclusive (Thursday Sina) | PASS |
+| Free interval: Monday daytime | PASS |
+| Reminder fires in a free slot and is recorded | PASS |
+| Same occurrence is not duplicated | PASS |
+| Reminder suppressed when the activity crosses a shift | PASS |
+| No reminder for a task already done today | PASS |
+| Global pause blocks all reminders without touching settings | PASS |
+| Backup JSON contains reminder fields (schemaVersion 3) | PASS |
+| `save()` persists reminder settings through the storage adapter | PASS |
+
+Method: the inline `<script>` is extracted from `index.html`, syntax-checked with
+`node --check`, then executed inside a Node `vm` context with minimal DOM,
+`localStorage`, `Blob`/`URL` shims and a fakeable `Date`. Scheduling behaviour is
+exercised directly (`checkScheduledReminders` with a fixed clock), so the suite
+runs in about a second and needs no browser. It complements — not replaces —
+the earlier browser-level run below.
+
+## Prior browser-level record (2026-11, container environment)
+
 **Release:** Stage A / in-dashboard reminder scheduling  
 **Browser:** Chromium headless through Playwright  
 **Timezone:** Browser context Europe/Berlin; app logic uses Asia/Tehran  
