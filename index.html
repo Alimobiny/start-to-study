@@ -197,6 +197,7 @@
     .header-actions { gap:8px; }
     .manage { border-color:rgba(22,69,54,.16); background:rgba(255,255,255,.78); box-shadow:0 5px 16px rgba(23,52,43,.05); transition:transform .18s,box-shadow .18s,background .18s; }
     .manage:hover { transform:translateY(-2px); background:#fff; box-shadow:0 9px 20px rgba(23,52,43,.1); }
+    .manage.disabled { opacity:.55; cursor:not-allowed; transform:none; }
     .progress { position:relative; overflow:hidden; padding:17px 19px; border-radius:24px; background:linear-gradient(125deg,rgba(255,255,255,.88),rgba(239,246,237,.8)); border:1px solid rgba(255,255,255,.94); box-shadow:var(--shadow); }
     .progress:after { content:""; position:absolute; width:120px; height:120px; left:-48px; top:-65px; border:18px solid rgba(243,196,92,.17); border-radius:50%; pointer-events:none; }
     .progress-row { position:relative; z-index:1; font-size:19px; }
@@ -333,7 +334,7 @@
   <main class="app">
     <header>
       <div><h1>روتین و دستیاری</h1><div class="date"><span id="date"></span><span> · </span><span id="clock"></span></div></div>
-      <div class="header-actions"><button class="manage" id="layouts">چینش</button><button class="manage" id="manage">مدیریت برنامه</button><button class="manage" id="backup">پشتیبان</button><button class="manage" id="restore">بازیابی</button><button class="manage" id="reminderMaster" type="button">یادآورها: روشن</button><input id="backupFile" type="file" accept="application/json,.json" hidden></div>
+      <div class="header-actions"><button class="manage" id="layouts">چینش</button><button class="manage" id="manage">مدیریت برنامه</button><button class="manage" id="backup">پشتیبان</button><button class="manage" id="restore">بازیابی</button><button class="manage" id="reminderMaster" type="button">یادآورها: روشن</button><button class="manage" id="systemNotify" type="button">اعلان سیستم: خاموش</button><input id="backupFile" type="file" accept="application/json,.json" hidden></div>
     </header>
     <div id="storageBadge" class="storage-badge">وضعیت ذخیره‌سازی</div>
     <section class="progress" aria-label="پیشرفت امروز"><div class="progress-row"><span>آرام و پیوسته</span><b id="score">۰ از ۰</b></div><div class="bar"><i id="bar"></i></div></section>
@@ -434,6 +435,7 @@
     if(!state.labels) state.labels=defaultLabels;
     if(!state.layout) state.layout='path';
     if(typeof state.remindersEnabled !== 'boolean') state.remindersEnabled=true;
+    if(typeof state.systemNotifications !== 'boolean') state.systemNotifications=false;
     state.reminderSent ||= {};
 
     state.studyLogs ||= {};
@@ -449,7 +451,7 @@
     function showStorageWarning(message) { const box=$('#storageWarning'); if(box){box.textContent=message;box.hidden=false;} }
     function updateStorageBadge(){ const el=$('#storageBadge'); if(el){el.textContent=storagePersistent?'ذخیره روی این دستگاه فعال است':'ذخیره موقت؛ پشتیبان بگیر';el.classList.toggle('warn',!storagePersistent);} }
     function exportBackup(){
-      const payload={app:'routine-residency',schemaVersion:3,exportedAt:new Date().toISOString(),state};
+      const payload={app:'routine-residency',schemaVersion:4,exportedAt:new Date().toISOString(),state};
       const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='routine-residency-backup.json'; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500); flash('نسخه پشتیبان دانلود شد.');
     }
@@ -458,7 +460,7 @@
         const payload=JSON.parse(await file.text()); const incoming=payload.state||payload;
         if(!incoming || typeof incoming!=='object' || !Array.isArray(incoming.tasks) || !incoming.tasks.every(t=>t&&typeof t.id==='string'&&typeof t.name==='string'&&['wake','morning','day','sleep'].includes(t.zone))) throw new Error('invalid schema');
         if(!incoming.tasks.some(t=>t.zone==='day')) throw new Error('missing daily task');
-        state={focus:incoming.focus||incoming.tasks.find(t=>t.zone==='day').id,done:incoming.done||{},remaining:Number.isFinite(incoming.remaining)?incoming.remaining:null,running:false,day:incoming.day||null,tasks:incoming.tasks.map(t=>({...t})),labels:{...defaultLabels,...(incoming.labels||{})},layout:incoming.layout||'path',studyLogs:incoming.studyLogs||{},activeView:['today','calendar','weekly'].includes(incoming.activeView)?incoming.activeView:'today',selectedISO:incoming.selectedISO||null,calendarStart:incoming.calendarStart||null,remindersEnabled:incoming.remindersEnabled!==false,reminderSent:incoming.reminderSent||{}};
+        state={focus:incoming.focus||incoming.tasks.find(t=>t.zone==='day').id,done:incoming.done||{},remaining:Number.isFinite(incoming.remaining)?incoming.remaining:null,running:false,day:incoming.day||null,tasks:incoming.tasks.map(t=>({...t})),labels:{...defaultLabels,...(incoming.labels||{})},layout:incoming.layout||'path',studyLogs:incoming.studyLogs||{},activeView:['today','calendar','weekly'].includes(incoming.activeView)?incoming.activeView:'today',selectedISO:incoming.selectedISO||null,calendarStart:incoming.calendarStart||null,remindersEnabled:incoming.remindersEnabled!==false,reminderSent:incoming.reminderSent||{},systemNotifications:incoming.systemNotifications===true};
         save();
         if(storagePersistent) { location.reload(); }
         else { render(); setView(state.activeView||'today'); flash('اطلاعات بازیابی شد؛ برای نگهداری پس از بستن صفحه، سرور محلی را اجرا یا دوباره پشتیبان بگیر.'); }
@@ -554,7 +556,18 @@
     function overlapsShift(startMinute,endMinute){return shiftIntervalsAround(isoDate(new Date(startMinute*60000))).some(s=>startMinute<s.end&&endMinute>s.start);}
     function insideShift(minute){return shiftIntervalsAround(isoDate(new Date(minute*60000))).some(s=>minute>=s.start&&minute<s.end);}
     function reminderKey(taskId,iso,time,lead){return [taskId,iso,time,lead].join('|');}
+    function sendSystemReminder(t,scheduledTime,lead,tag){
+      // Stage B: OS-level toast while the browser stays open. Best-effort only —
+      // any failure falls back to the in-page card that addReminderNotice always shows.
+      if(!state.systemNotifications) return;
+      if(typeof Notification==='undefined'||Notification.permission!=='granted') return;
+      try{
+        const notice=new Notification('یادآوری فعالیت',{body:`${t.name} · شروع ${scheduledTime} · ${toFa(lead)} دقیقه دیگر`,tag,dir:'rtl',lang:'fa'});
+        notice.onclick=()=>{window.focus();notice.close();};
+      }catch{}
+    }
     function addReminderNotice(t,iso,scheduledTime,lead){
+      sendSystemReminder(t,scheduledTime,lead,reminderKey(t.id,iso,scheduledTime,lead));
       const stack=$('#reminderStack'), card=document.createElement('article');card.className='reminder-card';
       card.innerHTML=`<strong>یادآوری فعالیت</strong><p>${safe(t.name)} · شروع ${safe(scheduledTime)} · ${toFa(lead)} دقیقه دیگر</p><div class="reminder-actions"><button type="button" class="reminder-done">ثبت انجام</button><button type="button" class="dismiss">بستن</button></div>`;
       card.querySelector('.reminder-done').onclick=()=>{state.done[t.id]=true;save();render();card.remove();flash('انجام فعالیت ثبت شد.');};
@@ -583,6 +596,16 @@
     }
     function updateReminderMaster(){const b=$('#reminderMaster');if(!b)return;const count=state.tasks.filter(t=>t.reminder?.enabled).length;b.textContent=state.remindersEnabled?`یادآورها: روشن (${toFa(count)})`:'یادآورها: خاموش';b.title='فعال یا غیرفعال‌کردن همه یادآورهای داخل داشبورد';}
     $('#reminderMaster').onclick=()=>{state.remindersEnabled=!state.remindersEnabled;save();updateReminderMaster();flash(state.remindersEnabled?'یادآورها فعال شدند.':'همه یادآورها متوقف شدند.');};
+    function updateSystemNotify(){const b=$('#systemNotify');if(!b)return;const supported=typeof Notification!=='undefined';b.textContent=state.systemNotifications?'اعلان سیستم: روشن':'اعلان سیستم: خاموش';b.title=supported?'نمایش اعلان سیستمی ویندوز برای یادآورها، در حدی که مرورگر باز باشد':'این مرورگر از اعلان سیستمی پشتیبانی نمی‌کند';if(!supported)b.classList.add('disabled');}
+    $('#systemNotify').onclick=async()=>{
+      if(state.systemNotifications){state.systemNotifications=false;save();updateSystemNotify();flash('اعلان سیستمی خاموش شد.');return;}
+      if(typeof Notification==='undefined'){flash('این مرورگر از اعلان سیستمی پشتیبانی نمی‌کند.');return;}
+      if(Notification.permission==='denied'){flash('اجازهٔ اعلان قبلاً رد شده؛ از تنظیمات سایت در مرورگر فعالش کن.');return;}
+      let permission=Notification.permission;
+      if(permission!=='granted'){try{permission=await Notification.requestPermission();}catch{flash('درخواست اجازهٔ اعلان ممکن نشد.');return;}}
+      if(permission!=='granted'){flash('اجازهٔ اعلان داده نشد؛ هر وقت خواستی دوباره روی همین دکمه بزن.');return;}
+      state.systemNotifications=true;save();updateSystemNotify();flash('اعلان سیستمی فعال شد؛ یادآورها حتی وقتی داشبورد در پس‌زمینه است دیده می‌شوند.');
+    };
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkScheduledReminders();});
     window.addEventListener('focus',checkScheduledReminders);
     setInterval(checkScheduledReminders,15000);
@@ -678,7 +701,7 @@
     if(!state.selectedISO) state.selectedISO=todayIso();
     if(!state.calendarStart) state.calendarStart=isoDate(currentMonthStart());
 
-    updateStorageBadge(); updateClock(); setInterval(updateClock,1000); render(); setView(state.activeView); updateReminderMaster(); checkScheduledReminders();
+    updateStorageBadge(); updateClock(); setInterval(updateClock,1000); render(); setView(state.activeView); updateReminderMaster(); updateSystemNotify(); checkScheduledReminders();
   </script>
 </body>
 </html>

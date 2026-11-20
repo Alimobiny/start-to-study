@@ -1,12 +1,12 @@
-# TEST REPORT — Stage A Reminder Engine
+# TEST REPORT — Reminder Engine (Stage A + Stage B)
 
 ## Local reproducible suite (current)
 
-**Release:** development-infrastructure repair session  
+**Release:** Stage B / browser system notifications  
 **Runner:** Node.js 24 (vm sandbox, no browser, no downloads)  
 **Command:** `node tests/run-tests.mjs` (or double-click `run_tests.bat`)  
 **Timezone:** logic exercised at fixed Asia/Tehran instants via a controllable clock  
-**Result:** 14 / 14 PASS — verified on the user's Windows machine (2026-11-20)
+**Result:** 21 / 21 PASS — verified on the user's Windows machine (2026-11-20)
 
 | Test | Result |
 |---|---|
@@ -22,15 +22,39 @@
 | Reminder suppressed when the activity crosses a shift | PASS |
 | No reminder for a task already done today | PASS |
 | Global pause blocks all reminders without touching settings | PASS |
-| Backup JSON contains reminder fields (schemaVersion 3) | PASS |
+| System notification fires alongside the in-page card | PASS |
+| System notification off: card only, nothing OS-level | PASS |
+| Denied permission falls back to card only, no throw | PASS |
+| Missing Notification API degrades gracefully | PASS |
+| Header button asks for permission on click, then enables | PASS |
+| Header button respects an explicit browser denial | PASS |
+| Backup JSON contains reminder fields (schemaVersion 4) | PASS |
+| Restore keeps the system-notification preference | PASS |
 | `save()` persists reminder settings through the storage adapter | PASS |
 
 Method: the inline `<script>` is extracted from `index.html`, syntax-checked with
 `node --check`, then executed inside a Node `vm` context with minimal DOM,
-`localStorage`, `Blob`/`URL` shims and a fakeable `Date`. Scheduling behaviour is
-exercised directly (`checkScheduledReminders` with a fixed clock), so the suite
-runs in about a second and needs no browser. It complements — not replaces —
-the earlier browser-level run below.
+`localStorage`, `Notification`, `Blob`/`URL` shims and a fakeable `Date`.
+Scheduling behaviour is exercised directly (`checkScheduledReminders` with a
+fixed clock), the permission flow through the real button handler, and
+restore through the real `#backupFile` change path — so the suite runs in
+about a second and needs no browser. **Not covered here:** the real Windows
+toast itself and the real browser permission prompt — those need the manual
+check below.
+
+## Manual check on the user's machine (Stage B, pending user run)
+
+1. Start the dashboard (`اجرای_داشبورد.bat`).
+2. Click «اعلان سیستم: خاموش» in the header and accept the browser prompt.
+3. Configure a reminder a few minutes ahead on a free slot; when it fires, a
+   Windows toast should appear even if the tab is in the background.
+4. Clicking the toast should bring the dashboard window to the front.
+5. Toggling the button off stops OS toasts while in-page cards continue.
+
+## Prior runs (history)
+
+- 2026-11-20 infrastructure session: 14/14 PASS (same runner, pre-Stage-B product code).
+- 2026-11 container, Chromium/Playwright: 19/19 PASS — details below.
 
 ## Prior browser-level record (2026-11, container environment)
 

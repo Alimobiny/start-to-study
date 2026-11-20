@@ -78,7 +78,7 @@ Previous HTML builds failed because of JavaScript Temporal Dead Zone issues:
 
 These caused the dashboard not to render or not to start. The current Stage A release has those initialization problems addressed. Do not copy code from earlier broken HTML versions unless necessary; use the `index.html` in this package as the current source of truth.
 
-## 7. Current release: Stage A implemented
+## 7. Current release: Stage A + Stage B implemented
 
 The latest print schedule artifacts produced earlier in the project are also available as a four-week, single-page A4 RTL Word/PDF template using B Nazanin. Current Stage A work only modifies the HTML dashboard; do not unnecessarily regenerate those Word/PDF files unless requested.
 
@@ -132,35 +132,46 @@ UI additions:
 - Reminders are disabled per task by default; user configures them manually.
 - Global master switch (`state.remindersEnabled`) pauses all reminders without deleting per-task settings.
 - Reminder history stored in `state.reminderSent`, with pruning to keep a bounded set.
-- The notification is an **in-page reminder card**, not an OS/browser notification.
+- Every occurrence shows an **in-page reminder card** (the only place with a «ثبت انجام» button).
+- Stage B addition: when enabled, the same occurrence also raises a Windows/browser OS notification (`Notification API`), RTL Persian, tagged with the occurrence key so duplicates cannot stack; clicking it focuses the window. Construction failures fall back silently to the card.
+
+### Stage B system-notification controls
+
+- Header button «اعلان سیستم: روشن/خاموش» next to the reminder master switch.
+- `Notification.requestPermission()` is called **only inside that button's click handler** (user gesture), never at load.
+- Explicit handling for: unsupported browser, previously denied permission, declined prompt, and granted.
+- Toggling off only flips `state.systemNotifications`; browser permission is left as-is.
+- At fire time the engine re-checks live `Notification.permission === 'granted'`, so a permission revoked later in browser settings silently degrades to card-only.
 
 ### Storage and backup
 
 - Existing storage key retained: `toloe-aram-v1`.
 - Reminder settings are stored in each task's `reminder` object.
-- Global toggle and de-duplication history are stored in top-level state properties.
-- Export JSON backup `schemaVersion` raised to 3.
-- Backup includes reminder settings and state; import logic preserves them.
+- Global toggle, system-notification preference (`state.systemNotifications`, default false) and de-duplication history are stored in top-level state properties.
+- Export JSON backup `schemaVersion` is 4 (raised from 3 in Stage B). Older backups still import; missing fields fall back to defaults.
+- Backup includes reminder settings and state; import logic preserves them, including the notification preference.
 - `localStorage` is local to one browser profile/device. There is no automatic cross-device sync in Stage A.
 
-## 8. Stage A limitations (explicit)
+## 8. Limitations (explicit, Stages A+B)
 
-- The dashboard must remain open and JavaScript must be running at reminder time.
-- Closing the browser/tab, OS sleep, shutdown, or browser throttling can delay or prevent in-page alerts.
-- This does not use Notification API, Service Worker, PWA, Push API, VAPID, backend or cloud scheduler.
-- No OS-level notification is sent.
+- The browser must remain open (any tab) and JavaScript running at reminder time. OS notifications work while the browser runs, including when the dashboard tab is in the background.
+- Closing the browser entirely, OS sleep, shutdown, or aggressive tab throttling can delay or prevent alerts. Background-tab timers may fire late (engine window is 3 minutes).
+- Windows Focus Assist / do-not-disturb can suppress the OS toast.
+- No Service Worker, PWA, Push API, VAPID, backend or cloud scheduler: nothing is delivered while the browser is closed.
 - No cross-device synchronization; each device/browser profile has independent local data. JSON backup/restore is manual transfer only.
-- This is deliberately the low-cost/low-complexity Stage A chosen by the user.
+- The real Windows toast and the real browser permission prompt are not covered by the automated suite; a manual check list is in `TEST_REPORT.md`.
 
 ## 9. Current tests
 
 Two layers:
 
 1. **Local reproducible suite (run before/after every change):**
-   `node tests/run-tests.mjs` — **14/14 passed** on the user's Windows machine (2026-11-20).
+   `node tests/run-tests.mjs` — **21/21 passed** on the user's Windows machine (2026-11-20).
    Covers script syntax, initial state shape, all seven shift intervals incl. overnight spans,
    end-exclusive boundaries, free-interval checks, reminder firing/dedup/shift-suppression/
-   done-skip/global-pause, backup schemaVersion-3 payload, and persistence round-trip.
+   done-skip/global-pause, Stage B system-notification fire/off/denied/missing-API/permission-button
+   paths, backup schemaVersion-4 payload, restore preserving the notification preference,
+   and persistence round-trip.
 2. **Prior browser-level run (container, 2026-11):** **19/19 passed** — details in `TEST_REPORT.md`.
 
 Covered:
@@ -194,13 +205,6 @@ Test environment note: browser navigation to container-local URLs was blocked by
 ## 11. Next steps / possible future stages
 
 These are options, not authorization to implement automatically:
-
-### Stage B — browser system notifications (while dashboard is running)
-
-- Request Notification permission only after a user gesture.
-- On reminder due, use `Notification API` with a safe fallback to in-page card.
-- This still does not guarantee background/closed-browser delivery.
-- Small, bounded scope; likely the next easiest upgrade if user asks.
 
 ### Stage C — PWA packaging
 

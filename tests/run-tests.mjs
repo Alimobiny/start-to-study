@@ -30,12 +30,17 @@ if (appCode.length < 10000) {
 
 // ------------------------------------------------------------------- harness
 
-const results = [];
-function test(name, fn) {
-  try { fn(); results.push([name, true, '']); }
-  catch (err) { results.push([name, false, err?.message || String(err)]); }
-}
+const registrations = [];
+function test(name, fn) { registrations.push([name, fn]); }
 function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+async function runAll() {
+  const results = [];
+  for (const [name, fn] of registrations) {
+    try { await fn(); results.push([name, true, '']); }
+    catch (err) { results.push([name, false, err?.message || String(err)]); }
+  }
+  return results;
+}
 
 // ---------------------------------------------------------------- DOM shims
 
@@ -119,6 +124,28 @@ const urlShim = {
   revokeObjectURL() {},
 };
 
+// Notification shim: controllable permission, recorded requests and instances.
+// Mirrors Chrome: constructing without 'granted' throws.
+const notifyLog = { requests: 0, instances: [], grantResult: undefined };
+class FakeNotification {
+  static permission = 'default';
+  static requestPermission() {
+    notifyLog.requests += 1;
+    return Promise.resolve(notifyLog.grantResult ?? FakeNotification.permission);
+  }
+  constructor(title, options = {}) {
+    if (FakeNotification.permission !== 'granted') {
+      throw new TypeError('Notification permission not granted');
+    }
+    this.title = title;
+    this.options = options;
+    this.onclick = null;
+    this.closed = false;
+    notifyLog.instances.push(this);
+  }
+  close() { this.closed = true; }
+}
+
 // ----------------------------------------------------------------- sandbox run
 
 fs.mkdirSync(tmpDir, { recursive: true });
@@ -138,6 +165,7 @@ const sandbox = {
   console,
   Blob: FakeBlob,
   URL: urlShim,
+  Notification: FakeNotification,
   location: { reload() {} },
   confirm: () => false,
 };
@@ -178,6 +206,11 @@ function resetScenario() {
   app.state.reminderSent = {};
   app.state.done = {};
   app.state.remindersEnabled = true;
+  app.state.systemNotifications = false;
+  FakeNotification.permission = 'default';
+  notifyLog.requests = 0;
+  notifyLog.instances.length = 0;
+  notifyLog.grantResult = undefined;
   stackEl().children.length = 0;
 }
 
@@ -313,19 +346,116 @@ test('global pause blocks all reminders without touching settings', () => {
   assert(study.reminder.enabled === true, 'per-task settings must survive the pause');
 });
 
-test('backup JSON contains reminder fields (schemaVersion 3)', () => {
+test('system notification fires alongside the in-page card', () => {
   resetScenario();
   configureStudyReminder({ time: '10:00', days: [3], lead: 10 });
+  app.state.systemNotifications = true;
+  FakeNotification.permission = 'granted';
+  setNow(2026, 10, 17, 6, 21);
+  app.checkScheduledReminders();
+  assert(cardCount() === 1, 'in-page card must still appear');
+  assert(notifyLog.instances.length === 1, `expected 1 system notification, got ${notifyLog.instances.length}`);
+  const notice = notifyLog.instances[0];
+  const key = app.reminderKey('study', TUE, '10:00', 10);
+  assert(notice.options?.tag === key, 'notification tag should be the occurrence key');
+  assert(notice.options?.dir === 'rtl' && notice.options?.lang === 'fa', 'notification should be rtl fa');
+  assert(typeof notice.onclick === 'function', 'notification should focus the window on click');
+});
+
+test('system notification off: card only, nothing OS-level', () => {
+  resetScenario();
+  configureStudyReminder({ time: '10:00', days: [3], lead: 10 });
+  FakeNotification.permission = 'granted';  // browser would allow it, but the setting is off
+  setNow(2026, 10, 17, 6, 21);
+  app.checkScheduledReminders();
+  assert(cardCount() === 1, 'card must still appear');
+  assert(notifyLog.instances.length === 0, 'no system notification expected');
+});
+
+test('denied permission falls back to card only, no throw', () => {
+  resetScenario();
+  configureStudyReminder({ time: '10:00', days: [3], lead: 10 });
+  app.state.systemNotifications = true;
+  FakeNotification.permission = 'denied';
+  setNow(2026, 10, 17, 6, 21);
+  app.checkScheduledReminders();
+  assert(cardCount() === 1, 'card must still appear');
+  assert(notifyLog.instances.length === 0, 'no system notification expected');
+});
+
+test('missing Notification API degrades gracefully', () => {
+  resetScenario();
+  configureStudyReminder({ time: '10:00', days: [3], lead: 10 });
+  app.state.systemNotifications = true;
+  sandbox.Notification = undefined;  // browser without the API
+  try {
+    setNow(2026, 10, 17, 6, 21);
+    app.checkScheduledReminders();
+    assert(cardCount() === 1, 'card must still appear');
+    assert(notifyLog.instances.length === 0, 'no system notification expected');
+  } finally {
+    sandbox.Notification = FakeNotification;
+  }
+});
+
+test('header button asks for permission on click, then enables', async () => {
+  resetScenario();
+  FakeNotification.permission = 'default';
+  notifyLog.grantResult = 'granted';  // user approves the browser prompt
+  const btn = documentShim.querySelector('#systemNotify');
+  assert(typeof btn.onclick === 'function', 'enable button should be wired at load');
+  await btn.onclick();
+  assert(notifyLog.requests === 1, `one permission request expected, got ${notifyLog.requests}`);
+  assert(app.state.systemNotifications === true, 'setting should turn on after grant');
+  assert(btn.textContent === 'اعلان سیستم: روشن', 'button label should reflect on state');
+  // Toggling back off must not ask the browser again:
+  notifyLog.requests = 0;
+  await btn.onclick();
+  assert(app.state.systemNotifications === false, 'setting should turn off');
+  assert(notifyLog.requests === 0, 'turning off must not re-request permission');
+});
+
+test('header button respects an explicit browser denial', async () => {
+  resetScenario();
+  FakeNotification.permission = 'denied';
+  const btn = documentShim.querySelector('#systemNotify');
+  await btn.onclick();
+  assert(notifyLog.requests === 0, 'denied permission must not trigger another request');
+  assert(app.state.systemNotifications === false, 'setting must stay off');
+});
+
+test('backup JSON contains reminder fields (schemaVersion 4)', () => {
+  resetScenario();
+  configureStudyReminder({ time: '10:00', days: [3], lead: 10 });
+  app.state.systemNotifications = true;
   exportedBlobs.length = 0;
   bySelector.get('#backup').fire('click');
   assert(exportedBlobs.length === 1, 'export should produce one blob');
   const payload = JSON.parse(exportedBlobs[0]._text);
   assert(payload.app === 'routine-residency', 'payload app tag mismatch');
-  assert(payload.schemaVersion === 3, 'schemaVersion should be 3');
+  assert(payload.schemaVersion === 4, 'schemaVersion should be 4');
   const study = payload.state.tasks.find(t => t.id === 'study');
   assert(study.reminder && study.reminder.enabled === true && study.reminder.time === '10:00',
     'exported task should keep its reminder config');
-  assert(typeof payload.state.remindersEnabled === 'boolean', 'master switch should be exported');
+  assert(payload.state.systemNotifications === true, 'notification preference should be exported');
+});
+
+test('restore keeps the system-notification preference', async () => {
+  resetScenario();
+  configureStudyReminder({ time: '10:00', days: [3], lead: 10 });
+  app.state.systemNotifications = true;
+  app.save();
+  const payload = {
+    app: 'routine-residency', schemaVersion: 4,
+    exportedAt: '2026-11-20T00:00:00.000Z', state: JSON.parse(localStorageShim.getItem('toloe-aram-v1')),
+  };
+  const fakeFile = { text: async () => JSON.stringify(payload) };
+  // importBackup runs through the real #backupFile change handler:
+  documentShim.querySelector('#backupFile').fire('change', { target: { files: [fakeFile], value: '' } });
+  for (let i = 0; i < 5; i++) await Promise.resolve();  // let the async import settle
+  assert(app.state.systemNotifications === true, 'preference lost on restore');
+  const study = app.state.tasks.find(t => t.id === 'study');
+  assert(study?.reminder?.time === '10:00', 'reminder config lost on restore');
 });
 
 test('save() persists reminder settings through the storage adapter', () => {
@@ -343,6 +473,7 @@ test('save() persists reminder settings through the storage adapter', () => {
 // ------------------------------------------------------------------- report
 
 clearNow();
+const results = await runAll();
 let failed = 0;
 console.log(`TEST RUN  ${new RealDate().toISOString()}`);
 console.log('-'.repeat(72));
