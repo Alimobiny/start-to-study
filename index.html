@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10261f">
+  <title>روتین و دستیاری بیهوشی</title>
+  <style>
+    :root { --ink:#17342b; --forest:#143b2e; --sage:#b9cdbd; --paper:#f8f5ed; --sand:#ede5d5; --coral:#e88663; --sun:#f5c761; --muted:#6f8179; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--ink); background:radial-gradient(circle at 92% 5%, #f9d88b 0 8%, transparent 25%), linear-gradient(145deg,#d9e7d7 0%,#f8f5ed 46%,#eee4d1 100%); font-family:"B Nazanin",Tahoma,sans-serif; }
+    button { font:inherit; border:0; cursor:pointer; color:inherit; }
+    .app { max-width:480px; min-height:100vh; margin:auto; padding:20px 18px calc(28px + env(safe-area-inset-bottom)); }
+    header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:4px 2px 18px; }
+    h1 { margin:0; font-size:32px; line-height:1; letter-spacing:-.5px; }
+    .date { margin-top:7px; color:var(--muted); font-size:16px; }
+    .manage { border:1px solid rgba(23,52,43,.18); border-radius:14px; padding:7px 12px; background:rgba(255,255,255,.62); font-size:16px; }
+    .header-actions { display:flex; gap:6px; align-items:center; }
+    .progress { background:rgba(255,255,255,.64); border:1px solid rgba(255,255,255,.8); padding:14px 16px; border-radius:21px; box-shadow:0 12px 30px rgba(32,68,51,.08); }
+    .progress-row { display:flex; justify-content:space-between; align-items:center; font-size:18px; }
+    .bar { height:8px; border-radius:9px; background:#dce5db; margin-top:9px; overflow:hidden; }
+    .bar > i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--forest),#4c806a); border-radius:inherit; transition:width .35s; }
+    .section-title { display:flex; align-items:center; justify-content:space-between; margin:25px 3px 10px; }
+    h2 { margin:0; font-size:21px; }
+    .hint { margin:0; color:var(--muted); font-size:14px; }
+    .anchor { background:var(--forest); color:#fffaf0; border-radius:20px; padding:12px 13px; display:grid; grid-template-columns:40px 1fr auto; align-items:center; gap:9px; box-shadow:0 10px 20px rgba(20,59,46,.16); }
+    .anchor-icon,.task-icon { width:42px; height:42px; border-radius:14px; display:grid; place-items:center; font-size:23px; background:rgba(255,255,255,.13); }
+    .anchor-icon { width:38px; height:38px; border-radius:12px; }
+    .anchor strong,.task strong { display:block; font-size:20px; line-height:1.05; }
+    .anchor small { color:#cfe0d3; font-family:Tahoma,sans-serif; font-size:11px; }
+    .anchor p { margin:1px 0 0; color:#cfe0d3; font-family:Tahoma,sans-serif; font-size:11px; direction:ltr; text-align:right; }
+    .check { width:28px; height:28px; border-radius:50%; border:2px solid currentColor; background:transparent; color:inherit; display:grid; place-items:center; font-family:Tahoma,sans-serif; font-weight:bold; }
+    .check.done { background:var(--sun); border-color:var(--sun); color:var(--forest); }
+    .focus-card { position:relative; overflow:hidden; padding:19px; border-radius:25px; background:linear-gradient(135deg,#fff9e9,#f3e6c7); border:1px solid rgba(245,199,97,.5); box-shadow:0 14px 25px rgba(90,70,28,.1); }
+    .focus-card:after { content:""; position:absolute; width:135px; height:135px; border:26px solid rgba(245,199,97,.22); border-radius:50%; left:-59px; bottom:-68px; }
+    .focus-label { color:#8b6a1e; font-size:15px; }
+    .focus-name { margin:3px 0 2px; font-size:27px; line-height:1; }
+    .focus-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; position:relative; z-index:1; }
+    .timer { font-family:Tahoma,sans-serif; font-size:27px; font-weight:bold; direction:ltr; }
+    .timer-btn { background:var(--forest); color:white; padding:8px 16px; border-radius:13px; font-size:16px; }
+    .timer-btn.running { background:var(--coral); }
+    .task-list { display:grid; gap:10px; }
+    .task { width:100%; text-align:right; padding:13px; display:grid; grid-template-columns:43px 1fr auto; align-items:center; gap:11px; background:rgba(255,255,255,.69); border:1px solid rgba(23,52,43,.08); border-radius:19px; box-shadow:0 7px 18px rgba(35,63,49,.055); transition:transform .18s, opacity .18s; }
+    .task:active { transform:scale(.985); }
+    .task-icon { background:#e5efe4; font-size:21px; }
+    .task p { color:var(--muted); margin:1px 0 0; font-family:Tahoma,sans-serif; font-size:11px; direction:ltr; text-align:right; }
+    .task .check { color:var(--forest); }
+    .task.done { opacity:.57; background:#e5eee5; }
+    .task.done strong { text-decoration:line-through; }
+    .task.selected { outline:2px solid var(--sun); background:#fff9e9; }
+    .task-controls { display:flex; align-items:center; gap:3px; }
+    .mini { width:27px; height:27px; border-radius:9px; background:#dce9db; color:var(--forest); font-family:Tahoma,sans-serif; font-size:14px; line-height:1; }
+    .mini.edit { background:#f6e7bb; }
+    .mini.remove { background:#f6d8cb; color:#8b3d2b; }
+    .choose { margin-top:16px; width:100%; background:transparent; color:var(--forest); border:1px dashed rgba(20,59,46,.42); border-radius:16px; padding:11px; font-size:17px; }
+    dialog { width:min(92vw,410px); border:0; border-radius:23px; padding:20px; background:var(--paper); color:var(--ink); box-shadow:0 20px 55px rgba(0,0,0,.25); }
+    dialog::backdrop { background:rgba(16,38,31,.38); backdrop-filter:blur(3px); }
+    dialog h3 { margin:0 0 6px; font-size:24px; }
+    dialog p { margin:0 0 14px; color:var(--muted); }
+    .choices { display:grid; gap:8px; }
+    .choice { padding:12px 14px; border-radius:14px; text-align:right; background:#e7eee4; font-size:18px; }
+    .form-grid { display:grid; gap:9px; }
+    label { font-size:16px; color:var(--muted); }
+    input { width:100%; border:1px solid #ccd8ca; border-radius:12px; padding:9px 11px; background:#fffdf7; color:var(--ink); font:18px "B Nazanin",Tahoma,sans-serif; }
+    input[type=number] { direction:ltr; text-align:right; font-family:Tahoma,sans-serif; }
+    select { width:100%; border:1px solid #ccd8ca; border-radius:12px; padding:9px 11px; background:#fffdf7; color:var(--ink); font:17px "B Nazanin",Tahoma,sans-serif; }
+    .form-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:13px; }
+    .save { padding:10px; border-radius:12px; background:var(--forest); color:white; font-size:18px; }
+    .close { width:100%; margin-top:12px; padding:10px; border-radius:12px; background:#ddd7ca; }
+    .toast { position:fixed; right:50%; transform:translateX(50%) translateY(90px); bottom:22px; background:var(--forest); color:white; padding:10px 17px; border-radius:15px; box-shadow:0 9px 21px rgba(0,0,0,.16); transition:transform .3s; white-space:nowrap; z-index:5; }
+    .toast.show { transform:translateX(50%) translateY(0); }
+    .period { margin-top:22px; padding:14px 12px 12px; border-radius:24px; background:rgba(255,255,255,.38); border:1px solid rgba(255,255,255,.65); }
+    .period-head { display:flex; align-items:center; justify-content:space-between; margin:0 3px 10px; }
+    .period h2 { font-size:23px; }
+    .period-note { color:var(--muted); font-size:14px; }
+    .period .focus-card { margin-bottom:10px; }
+    #daySections.layout-pairs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    #daySections.layout-pairs .period { margin-top:12px; min-width:0; }
+    #daySections.layout-pairs .period:nth-child(3), #daySections.layout-pairs .period:nth-child(4) { grid-column:1 / -1; }
+    #daySections.layout-pairs .task { padding:10px; grid-template-columns:35px 1fr auto; gap:7px; }
+    #daySections.layout-pairs .task-icon { width:35px; height:35px; font-size:18px; }
+    #daySections.layout-sandwich { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    #daySections.layout-sandwich .period { margin-top:12px; min-width:0; }
+    #daySections.layout-sandwich .period:nth-child(1) { order:1; }
+    #daySections.layout-sandwich .period:nth-child(4) { order:2; }
+    #daySections.layout-sandwich .period:nth-child(2) { order:3; grid-column:1 / -1; }
+    #daySections.layout-sandwich .period:nth-child(3) { order:4; grid-column:1 / -1; }
+    #daySections.layout-sandwich .task { padding:10px; grid-template-columns:35px 1fr auto; gap:7px; }
+    #daySections.layout-sandwich .task-icon { width:35px; height:35px; font-size:18px; }
+    #daySections.layout-focus { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    #daySections.layout-focus .period { margin-top:12px; min-width:0; }
+    #daySections.layout-focus .period:nth-child(1) { order:1; grid-column:1 / -1; }
+    #daySections.layout-focus .period:nth-child(3) { order:2; grid-column:1 / -1; }
+    #daySections.layout-focus .period:nth-child(2) { order:3; }
+    #daySections.layout-focus .period:nth-child(4) { order:4; }
+    #daySections.layout-focus .task { padding:10px; grid-template-columns:35px 1fr auto; gap:7px; }
+    #daySections.layout-focus .task-icon { width:35px; height:35px; font-size:18px; }
+    #daySections.layout-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    #daySections.layout-grid .period { margin-top:12px; min-width:0; }
+    #daySections.layout-grid .task { padding:10px; grid-template-columns:33px 1fr auto; gap:6px; }
+    #daySections.layout-grid .task-icon { width:33px; height:33px; font-size:17px; }
+    #daySections.layout-grid .focus-card { padding:13px; }
+    #daySections.layout-grid .focus-name { font-size:23px; }
+    #daySections.layout-grid .timer { font-size:20px; }
+    #daySections.layout-grid .timer-btn { padding:7px 9px; font-size:14px; }
+    .layout-options { display:grid; gap:9px; }
+    .layout-choice { text-align:right; padding:15px; border:1px solid #d7e0d4; border-radius:16px; background:#edf3ea; }
+    .layout-choice.active { outline:2px solid var(--forest); background:#e0ecdd; }
+    .layout-choice strong { display:block; font-size:20px; }
+    .layout-choice span { color:var(--muted); font-size:15px; }
+    .manager { max-height:min(86vh,760px); overflow:auto; }
+    .manager-tabs { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin:13px 0; }
+    .manager-tab { padding:8px 2px; border-radius:11px; background:#e7eee4; font-size:15px; }
+    .manager-tab.active { color:white; background:var(--forest); }
+    .manager-zone-title { display:flex; gap:7px; margin-bottom:10px; }
+    .manager-zone-title input { flex:1; }
+    .manager-zone-title button { border-radius:12px; padding:0 12px; background:#e5efe4; }
+    .manager-list { display:grid; gap:8px; }
+    .manager-card { display:grid; grid-template-columns:1fr auto; gap:7px; align-items:center; padding:9px; border-radius:15px; background:#e9f0e8; }
+    .manager-card-open { display:flex; align-items:center; gap:9px; text-align:right; background:transparent; min-width:0; }
+    .manager-card-icon { width:33px; height:33px; display:grid; place-items:center; border-radius:10px; background:white; font-size:18px; }
+    .manager-card strong { display:block; font-size:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .manager-card small { display:block; color:var(--muted); font-family:Tahoma,sans-serif; font-size:10px; direction:ltr; text-align:right; }
+    .manager-arrows { display:flex; gap:3px; }
+    .manager-arrows button { width:29px; height:33px; border-radius:9px; background:#d6e5d4; color:var(--forest); }
+    .manager-remove { width:100%; margin-top:9px; padding:9px; border-radius:12px; color:#8b3d2b; background:#f6d8cb; }
+    .manager-add { width:100%; margin-top:9px; padding:10px; border-radius:12px; border:1px dashed rgba(20,59,46,.42); background:transparent; }
+    @media (min-width:650px) { .app { padding-top:35px; } }
+
+    .app { max-width:920px; }
+    .views { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:14px 0 18px; }
+    .view-btn { padding:10px 8px; border-radius:13px; background:rgba(255,255,255,.62); border:1px solid rgba(23,52,43,.12); font-size:17px; }
+    .view-btn.active { background:var(--forest); color:#fffaf0; }
+    .panel[hidden] { display:none!important; }
+    .calendar-wrap { background:rgba(255,255,255,.62); border:1px solid rgba(255,255,255,.8); border-radius:22px; padding:15px; box-shadow:0 10px 26px rgba(32,68,51,.07); }
+    .month-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+    .month-nav strong { font-size:22px; }
+    .nav-arrow { width:38px; height:38px; border-radius:12px; background:#e5efe4; font-size:22px; }
+    .calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; }
+    .weekday { color:var(--muted); text-align:center; font-size:14px; padding:3px 0; }
+    .cal-day { min-height:64px; padding:6px 3px; border-radius:11px; background:rgba(255,255,255,.72); border:1px solid rgba(23,52,43,.08); text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .cal-day.outside { opacity:.35; }
+    .cal-day.today { outline:2px solid var(--coral); }
+    .cal-day.selected { background:#fff4d5; outline:2px solid var(--forest); }
+    .cal-day .day-number { font-family:Tahoma,sans-serif; font-size:15px; font-weight:bold; }
+    .cal-day .day-dot { font-size:10px; color:var(--forest); line-height:1.2; max-width:100%; overflow:hidden; white-space:nowrap; }
+    .cal-day .study-dot { font-family:Tahoma,sans-serif; font-size:10px; color:#8b6a1e; }
+    .day-detail { margin-top:14px; padding:15px; border-radius:18px; background:#fff9e9; border:1px solid rgba(245,199,97,.48); }
+    .detail-title { font-size:21px; font-weight:bold; margin-bottom:8px; }
+    .detail-meta { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+    .detail-chip { padding:5px 9px; border-radius:20px; background:#e4eee2; font-size:14px; }
+    .shift-list { display:grid; gap:6px; margin:9px 0 13px; }
+    .shift-row { padding:8px 10px; background:rgba(255,255,255,.78); border-radius:11px; display:flex; justify-content:space-between; gap:8px; font-size:16px; }
+    .shift-row small { color:var(--muted); font-family:Tahoma,sans-serif; font-size:11px; direction:ltr; white-space:nowrap; }
+    .study-entry { display:grid; grid-template-columns:1fr 110px auto; align-items:end; gap:8px; }
+    .study-entry label { display:block; }
+    .study-entry input { font-family:Tahoma,sans-serif; direction:ltr; text-align:center; }
+    .study-entry button { border-radius:12px; padding:10px 12px; color:white; background:var(--forest); white-space:nowrap; }
+    .monthly-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin:12px 0; }
+    .stat { padding:12px; background:rgba(255,255,255,.65); border-radius:15px; border:1px solid rgba(23,52,43,.08); }
+    .stat b { display:block; font-family:Tahoma,sans-serif; font-size:22px; }
+    .stat span { color:var(--muted); font-size:14px; }
+    .weekly-table-wrap { overflow:auto; border-radius:17px; }
+    .weekly-table { width:100%; border-collapse:collapse; background:rgba(255,255,255,.78); min-width:520px; }
+    .weekly-table th,.weekly-table td { padding:10px 8px; border-bottom:1px solid rgba(23,52,43,.1); text-align:right; font-size:15px; }
+    .weekly-table th { background:#e7eee4; color:var(--forest); }
+    .weekly-table td:last-child { direction:rtl; text-align:right; }
+    .shift-cell { min-width:180px; }
+    .week-shift-item { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:2px 0; }
+    .week-shift-item small { direction:ltr; unicode-bidi:isolate; white-space:nowrap; font-family:Tahoma,sans-serif; font-size:11px; color:var(--muted); }
+    .small-note { color:var(--muted); font-size:13px; margin-top:10px; }
+    .routine-title { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    @media(max-width:620px) { .app{padding-left:13px;padding-right:13px;} .cal-day{min-height:53px;} .study-entry{grid-template-columns:1fr 90px;} .study-entry button{grid-column:1/-1;} .view-btn{font-size:15px;} }
+    @media(min-width:700px) { #routinePanel #daySections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } #routinePanel #daySections .period{margin-top:12px;} }
+
+
+    /* UI refinement pass: preserve all existing routine/calendar behavior */
+    :root {
+      --ink:#18372e; --forest:#164536; --sage:#c7d9ca; --paper:#fbf8f1;
+      --sand:#eee5d5; --coral:#d97858; --sun:#f3c45c; --muted:#718078;
+      --glass:rgba(255,255,255,.72); --line:rgba(24,55,46,.11);
+      --shadow:0 18px 46px rgba(29,65,48,.09);
+    }
+    body {
+      background:
+        radial-gradient(ellipse at 5% 0%,rgba(244,197,99,.34),transparent 28%),
+        radial-gradient(ellipse at 96% 18%,rgba(142,182,151,.33),transparent 30%),
+        linear-gradient(145deg,#e2ebdf 0%,#f8f5ed 52%,#eee6d8 100%);
+      background-attachment:fixed;
+    }
+    .app { max-width:980px; padding-top:26px; }
+    header { align-items:center; margin-bottom:21px; }
+    header h1 { font-size:36px; letter-spacing:0; }
+    .date { display:inline-flex; align-items:center; gap:7px; margin-top:9px; padding:5px 11px;
+      border:1px solid rgba(22,69,54,.12); border-radius:999px; background:rgba(255,255,255,.5);
+      font-size:16px; box-shadow:0 5px 15px rgba(23,52,43,.04); }
+    .header-actions { gap:8px; }
+    .manage { border-color:rgba(22,69,54,.16); background:rgba(255,255,255,.78); box-shadow:0 5px 16px rgba(23,52,43,.05); transition:transform .18s,box-shadow .18s,background .18s; }
+    .manage:hover { transform:translateY(-2px); background:#fff; box-shadow:0 9px 20px rgba(23,52,43,.1); }
+    .progress { position:relative; overflow:hidden; padding:17px 19px; border-radius:24px; background:linear-gradient(125deg,rgba(255,255,255,.88),rgba(239,246,237,.8)); border:1px solid rgba(255,255,255,.94); box-shadow:var(--shadow); }
+    .progress:after { content:""; position:absolute; width:120px; height:120px; left:-48px; top:-65px; border:18px solid rgba(243,196,92,.17); border-radius:50%; pointer-events:none; }
+    .progress-row { position:relative; z-index:1; font-size:19px; }
+    .progress-row b { font-family:"B Nazanin",Tahoma,sans-serif; font-size:18px; padding:3px 11px; border-radius:999px; background:#e6efe4; color:var(--forest); }
+    .bar { height:10px; margin-top:12px; background:#e0e9df; }
+    .bar>i { background:linear-gradient(90deg,#164536,#6d9b79,#edb95a); box-shadow:0 0 12px rgba(72,125,89,.25); }
+    .views { position:sticky; top:8px; z-index:4; padding:6px; border-radius:18px; background:rgba(248,248,240,.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.88); box-shadow:0 9px 24px rgba(28,61,45,.08); }
+    .view-btn { border:1px solid transparent; border-radius:13px; transition:all .2s ease; }
+    .view-btn:hover { background:#edf3e9; transform:translateY(-1px); }
+    .view-btn.active { background:linear-gradient(135deg,#164536,#2d624c); box-shadow:0 7px 16px rgba(22,69,54,.2); color:#fff; }
+    .panel { animation:panelIn .32s ease both; }
+    @keyframes panelIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .period,.calendar-wrap { background:rgba(255,255,255,.58); border:1px solid rgba(255,255,255,.9); border-radius:24px; box-shadow:0 10px 28px rgba(29,65,48,.06); }
+    .period { padding:15px; }
+    .period-head { margin-bottom:12px; }
+    .period h2 { display:flex; align-items:center; gap:8px; font-size:24px; }
+    .period h2:before { content:""; width:7px; height:22px; border-radius:8px; background:linear-gradient(var(--forest),#8eb394); }
+    .period-note { padding:3px 9px; border-radius:999px; background:rgba(228,238,226,.82); font-size:13px; }
+    .anchor { border:1px solid rgba(255,255,255,.16); background:linear-gradient(120deg,#123d2f,#286047); box-shadow:0 12px 25px rgba(20,59,46,.19); transition:transform .2s,box-shadow .2s; }
+    .anchor:hover { transform:translateY(-2px); box-shadow:0 16px 29px rgba(20,59,46,.22); }
+    .task { border-radius:18px; border-color:rgba(24,55,46,.07); background:rgba(255,255,255,.82); box-shadow:0 6px 17px rgba(35,63,49,.045); transition:transform .18s,border-color .18s,box-shadow .18s,background .18s; }
+    .task:hover { transform:translateY(-2px); border-color:rgba(22,69,54,.2); box-shadow:0 11px 22px rgba(35,63,49,.09); }
+    .task-icon { background:linear-gradient(145deg,#e8f0e5,#dce9dc); color:#315d46; }
+    .task.done { opacity:.72; border-color:rgba(46,103,72,.14); }
+    .task.done .task-icon { background:#d5e7d8; }
+    .check { transition:all .18s; }
+    .check:hover { transform:scale(1.08); }
+    .check.done { box-shadow:0 0 0 4px rgba(243,196,92,.18); }
+    .focus-card { border-radius:25px; background:linear-gradient(125deg,#fff9e9 0%,#f6e9c9 75%,#f0dfb9 100%); box-shadow:0 15px 28px rgba(90,70,28,.11); }
+    .focus-name { line-height:1.22; }
+    .timer { letter-spacing:1px; font-variant-numeric:tabular-nums; }
+    .timer-btn { box-shadow:0 7px 16px rgba(20,59,46,.18); transition:transform .18s,box-shadow .18s; }
+    .timer-btn:hover { transform:translateY(-2px); box-shadow:0 10px 20px rgba(20,59,46,.22); }
+    .timer-btn.running { animation:timerPulse 1.8s ease-in-out infinite; }
+    @keyframes timerPulse { 0%,100%{box-shadow:0 0 0 0 rgba(217,120,88,.25)} 50%{box-shadow:0 0 0 7px rgba(217,120,88,0)} }
+    .calendar-wrap { padding:17px; }
+    .month-nav { padding:2px 2px 10px; }
+    .month-nav strong { font-size:25px; }
+    .nav-arrow { border:1px solid rgba(22,69,54,.1); box-shadow:0 4px 12px rgba(23,52,43,.06); transition:transform .18s,background .18s; }
+    .nav-arrow:hover { transform:scale(1.06); background:#d9e8d7; }
+    .weekday { font-size:15px; font-weight:bold; padding:5px 0; }
+    .cal-day { min-height:72px; border:1px solid rgba(22,69,54,.09); border-radius:13px; background:rgba(255,255,255,.86); box-shadow:0 3px 9px rgba(23,52,43,.025); transition:transform .16s,border-color .16s,box-shadow .16s; }
+    .cal-day:hover { transform:translateY(-2px); border-color:rgba(22,69,54,.3); box-shadow:0 7px 14px rgba(23,52,43,.08); }
+    .cal-day.today { outline:2px solid var(--coral); outline-offset:1px; }
+    .cal-day.selected { background:linear-gradient(145deg,#fff5d9,#fffaf0); outline:2px solid var(--forest); box-shadow:0 6px 15px rgba(22,69,54,.11); }
+    .day-detail { box-shadow:0 9px 22px rgba(90,70,28,.07); }
+    .detail-chip { border:1px solid rgba(22,69,54,.06); }
+    .shift-row { border:1px solid rgba(22,69,54,.07); box-shadow:0 3px 9px rgba(23,52,43,.035); }
+    .study-entry button { box-shadow:0 6px 14px rgba(20,59,46,.14); transition:transform .18s; }
+    .study-entry button:hover { transform:translateY(-1px); }
+    .stat { border:1px solid rgba(22,69,54,.08); box-shadow:0 5px 15px rgba(23,52,43,.035); }
+    .weekly-table { border-radius:14px; overflow:hidden; }
+    .weekly-table th { background:#e8f0e6; }
+    .weekly-table tbody tr { transition:background .16s; }
+    .weekly-table tbody tr:hover { background:#fff9e9; }
+    dialog { border:1px solid rgba(255,255,255,.8); box-shadow:0 24px 70px rgba(15,40,29,.28); animation:dialogIn .2s ease both; }
+    @keyframes dialogIn { from{opacity:0;transform:translateY(8px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .choice,.layout-choice,.manager-card { transition:transform .16s,background .16s,box-shadow .16s; }
+    .choice:hover,.layout-choice:hover { transform:translateY(-1px); box-shadow:0 6px 15px rgba(23,52,43,.08); }
+    input:focus,select:focus { outline:3px solid rgba(95,145,108,.2); border-color:#6d9b79; }
+    button:focus-visible { outline:3px solid rgba(217,120,88,.52); outline-offset:2px; }
+    .toast { box-shadow:0 12px 28px rgba(15,40,29,.24); }
+    @media(min-width:700px) {
+      .app { max-width:1040px; padding-left:24px; padding-right:24px; }
+      #routinePanel #daySections { grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
+      .views { max-width:600px; margin-left:auto; margin-right:auto; }
+    }
+    @media(max-width:620px) {
+      header h1 { font-size:31px; }
+      .manage { padding:7px 9px; font-size:15px; }
+      .period { padding:12px; }
+      .cal-day { min-height:58px; }
+      .weekday { font-size:12px; }
+      .calendar-wrap { padding:11px; }
+    }
+    @media(prefers-reduced-motion:reduce) {
+      *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+    }
+
+
+    /* Subtle motion and interaction detail */
+    .bar>i { background-size:220% 100%; animation:progressFlow 8s ease-in-out infinite; }
+    @keyframes progressFlow { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    .task-list > * { animation:taskEnter .34s ease both; }
+    .task-list > *:nth-child(2) { animation-delay:.035s; }
+    .task-list > *:nth-child(3) { animation-delay:.07s; }
+    .task-list > *:nth-child(4) { animation-delay:.105s; }
+    .task-list > *:nth-child(5) { animation-delay:.14s; }
+    @keyframes taskEnter { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+    .focus-card:after { animation:focusDrift 12s ease-in-out infinite alternate; }
+    @keyframes focusDrift { from{transform:translate(0,0) rotate(0)} to{transform:translate(14px,-7px) rotate(9deg)} }
+    .cal-day .day-number { display:inline-grid; place-items:center; min-width:25px; min-height:25px; border-radius:50%; }
+    .cal-day.today .day-number { background:rgba(217,120,88,.14); color:#8f422b; }
+    .cal-day.selected .day-number { background:var(--forest); color:#fff; }
+    .day-detail { animation:panelIn .24s ease both; }
+    .weekly-table th:first-child,.weekly-table td:first-child { white-space:nowrap; font-weight:bold; }
+    @media(max-width:620px) {
+      .views { top:5px; }
+      .progress-row { font-size:17px; }
+      .progress-row b { font-size:16px; }
+      .view-btn { padding:10px 5px; }
+      .cal-day { min-height:61px; }
+      .cal-day .day-number { min-width:23px; min-height:23px; }
+    }
+
+  
+    .storage-badge{display:inline-flex;align-items:center;gap:7px;margin:0 2px 12px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.66);border:1px solid rgba(22,69,54,.12);color:var(--forest);font-size:14px}
+    .storage-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:#4b8b5a;box-shadow:0 0 0 3px rgba(75,139,90,.12)}
+    .storage-badge.warn{color:#8a4d23;background:#fff4df}.storage-badge.warn:before{background:#d97858;box-shadow:0 0 0 3px rgba(217,120,88,.13)}
+    .header-actions{flex-wrap:wrap;justify-content:flex-end}
+    .manage{font-size:14px;padding:6px 9px}
+    @media(max-width:620px){.header-actions{max-width:210px}.manage{font-size:13px;padding:6px 7px}}
+  
+    .reminder-settings{margin-top:14px;padding:13px;border:1px solid rgba(20,59,46,.16);border-radius:16px;background:rgba(235,243,233,.7)}
+    .reminder-enable{display:flex;align-items:center;gap:9px;color:var(--forest);font-weight:bold}
+    .reminder-enable input,.repeat-grid input{width:17px;height:17px;accent-color:var(--forest);margin:0}
+    .reminder-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+    .reminder-form-grid input,.reminder-form-grid select{margin-top:5px}
+    .repeat-caption{margin:12px 0 6px;font-size:15px;color:var(--muted)}
+    .repeat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+    .repeat-grid label{display:flex;align-items:center;gap:5px;padding:7px 5px;border-radius:9px;background:rgba(255,255,255,.72);font-size:14px;white-space:nowrap}
+    .reminder-help{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.7}
+    .reminder-summary{color:var(--forest)!important}
+    .reminder-stack{position:fixed;z-index:20;bottom:18px;left:18px;display:grid;gap:8px;width:min(390px,calc(100vw - 36px));pointer-events:none}
+    .reminder-card{pointer-events:auto;background:#173f31;color:#fffdf6;border:1px solid rgba(255,255,255,.22);border-radius:17px;padding:13px 15px;box-shadow:0 14px 35px rgba(12,39,28,.28);animation:reminderIn .25s ease both}
+    .reminder-card strong{display:block;font-size:19px}.reminder-card p{margin:3px 0 10px;color:#d6e6d8;font-size:14px}
+    .reminder-actions{display:flex;gap:7px}.reminder-actions button{padding:6px 11px;border-radius:10px;background:#f3c45c;color:#18372e;font-size:14px}.reminder-actions .dismiss{background:rgba(255,255,255,.16);color:#fff}
+    @keyframes reminderIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:420px){.reminder-form-grid{grid-template-columns:1fr}.repeat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.reminder-stack{left:10px;bottom:10px;width:calc(100vw - 20px)}}
+
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div><h1>روتین و دستیاری</h1><div class="date"><span id="date"></span><span> · </span><span id="clock"></span></div></div>
+      <div class="header-actions"><button class="manage" id="layouts">چینش</button><button class="manage" id="manage">مدیریت برنامه</button><button class="manage" id="backup">پشتیبان</button><button class="manage" id="restore">بازیابی</button><button class="manage" id="reminderMaster" type="button">یادآورها: روشن</button><input id="backupFile" type="file" accept="application/json,.json" hidden></div>
+    </header>
+    <div id="storageBadge" class="storage-badge">وضعیت ذخیره‌سازی</div>
+    <section class="progress" aria-label="پیشرفت امروز"><div class="progress-row"><span>آرام و پیوسته</span><b id="score">۰ از ۰</b></div><div class="bar"><i id="bar"></i></div></section>
+
+    <nav class="views" aria-label="بخش‌های برنامه">
+      <button class="view-btn active" data-view="today">روتین امروز</button>
+      <button class="view-btn" data-view="calendar">تقویم شمسی</button>
+      <button class="view-btn" data-view="weekly">برنامه هفتگی</button>
+    </nav>
+    <p id="storageWarning" class="small-note" hidden>ذخیره‌سازی پایدار در دسترس نیست؛ داشبورد کار می‌کند اما برای نگهداری اطلاعات از «پشتیبان» استفاده کن.</p>
+    <section class="panel" id="routinePanel"><section id="daySections"></section></section>
+    <section class="panel" id="calendarPanel" hidden>
+      <div class="calendar-wrap">
+        <div class="month-nav"><button class="nav-arrow" id="prevMonth" aria-label="ماه قبل">‹</button><strong id="monthTitle"></strong><button class="nav-arrow" id="nextMonth" aria-label="ماه بعد">›</button></div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="monthly-stats">
+          <div class="stat"><b id="monthActual">۰</b><span>ساعت مطالعه ثبت‌شده در ماه</span></div>
+          <div class="stat"><b>۱۱.۵</b><span>ساعت هدف پایه در هفته</span></div>
+        </div>
+        <div class="day-detail" id="dayDetail"></div>
+      </div>
+    </section>
+    <section class="panel" id="weeklyPanel" hidden>
+      <div class="calendar-wrap">
+        <div class="section-title" style="margin-top:0"><h2>الگوی ثابت هفته</h2><span class="hint">تکرار در چهار هفته</span></div>
+        <div class="weekly-table-wrap"><table class="weekly-table"><thead><tr><th>روز</th><th>شیفت‌ها</th><th>ظرفیت مطالعه</th></tr></thead><tbody id="weeklyRows"></tbody></table></div>
+        <p class="small-note">دوشنبه پس از شیفت شب، روز بازیابی است. ظرفیت اختیاری دوشنبه و افزایش پنج‌شنبه در هدف پایه هفتگی محاسبه نشده است.</p>
+      </div>
+    </section>
+  </main>
+  <dialog id="dialog"><h3>کار اصلی را انتخاب کن</h3><p>همان کاری که امروز می‌خواهی حتماً انجام شود.</p><div class="choices" id="choices"></div><button class="close" id="close">فعلاً نه</button></dialog>
+  <dialog id="layoutDialog"><h3>انتخاب چینش</h3><p>یکی از الگوهای آماده را انتخاب کن.</p><div class="layout-options" id="layoutOptions"></div><button class="close" id="layoutClose">بستن</button></dialog>
+  <dialog id="manager" class="manager"><h3>مدیریت برنامه</h3><p>یک بخش را انتخاب کن؛ برای ویرایش هر کار، روی خودش بزن.</p><div class="manager-tabs" id="managerTabs"></div><div class="manager-zone-title"><input id="zoneTitle" maxlength="28"><button id="saveZoneTitle">ذخیرهٔ عنوان</button></div><div class="manager-list" id="managerRows"></div><button class="manager-add" id="managerAdd">＋ افزودن کار به این بخش</button><button class="close" id="managerClose">پایان</button></dialog>
+  <dialog id="taskEditor"><h3 id="taskEditorTitle">ویرایش کار</h3><p>مشخصات و یادآوری همین فعالیت را تنظیم کن.</p><div class="form-grid"><label>نام کار<input id="taskName" maxlength="42"></label><label>مدت فعالیت به دقیقه<input id="taskTime" type="number" min="1" max="480"></label><label>نشانهٔ کوچک<input id="taskIcon" maxlength="2"></label><label>بخش کار<select id="taskZone"></select></label></div>
+    <section class="reminder-settings">
+      <label class="reminder-enable"><input id="taskReminderEnabled" type="checkbox"> فعال‌سازی یادآوری این فعالیت</label>
+      <div id="reminderFields" hidden>
+        <div class="reminder-form-grid">
+          <label>ساعت شروع فعالیت<input id="taskReminderTime" type="time" value="09:00"></label>
+          <label>یادآوری قبل از شروع<select id="taskReminderLead"><option value="5">۵ دقیقه</option><option value="10" selected>۱۰ دقیقه</option><option value="15">۱۵ دقیقه</option></select></label>
+        </div>
+        <div class="repeat-caption">روزهای تکرار</div>
+        <div class="repeat-grid" id="reminderDays">
+          <label><input type="checkbox" value="0" name="reminderDay"> شنبه</label>
+          <label><input type="checkbox" value="1" name="reminderDay"> یکشنبه</label>
+          <label><input type="checkbox" value="2" name="reminderDay"> دوشنبه</label>
+          <label><input type="checkbox" value="3" name="reminderDay"> سه‌شنبه</label>
+          <label><input type="checkbox" value="4" name="reminderDay"> چهارشنبه</label>
+          <label><input type="checkbox" value="5" name="reminderDay"> پنج‌شنبه</label>
+          <label><input type="checkbox" value="6" name="reminderDay"> جمعه</label>
+        </div>
+        <p class="reminder-help">این نسخه فقط وقتی داشبورد باز است یادآوری می‌کند. اگر ساعت شروع یا مدت فعالیت با شیفت کاری تداخل داشته باشد، یادآوری آن نوبت حذف می‌شود.</p>
+      </div>
+    </section>
+    <div class="form-actions"><button class="save" id="taskSave">ذخیره</button><button class="close" id="taskCancel">انصراف</button></div><button class="manager-remove" id="taskDelete">حذف این کار</button></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div><div class="reminder-stack" id="reminderStack" aria-live="assertive"></div>
+  <script>
+    // Declare the DOM helper before its first use. The previous build referenced $ before initialization,
+    // which triggered a Temporal Dead Zone ReferenceError and stopped every interaction.
+    const $ = (selector) => document.querySelector(selector);
+
+    const initialTasks = [
+      {id:'rubik', name:'حل‌کردن روبیک', time:2, icon:'◫', zone:'wake'},
+      {id:'breath', name:'تکنیک تنفس', time:2, icon:'◌', zone:'wake'},
+      {id:'morning', name:'صبحانه و آماده‌شدن', time:30, icon:'☕', zone:'morning'},
+      {id:'coffee', name:'قهوه', time:10, icon:'◒', zone:'morning'},
+      {id:'meditate', name:'مدیتیشن', time:10, icon:'◌', zone:'morning'},
+      {id:'mind-exercise', name:'ورزش ذهن', time:15, icon:'◈', zone:'morning'},
+      {id:'corrective', name:'حرکت اصلاحی و دوره ورزشی', time:20, icon:'⌁', zone:'day'},
+      {id:'book', name:'کتاب', time:20, icon:'▤', zone:'day'},
+      {id:'news', name:'اخبار', time:10, icon:'◒', zone:'day'},
+      {id:'trading', name:'ترید', time:20, icon:'↗', zone:'day'},
+      {id:'finance', name:'مدیریت مالی', time:20, icon:'◫', zone:'day'},
+      {id:'study', name:'درس‌خواندن', time:60, icon:'✎', zone:'day'},
+      {id:'research', name:'تحقیق‌کردن', time:90, icon:'⌕', zone:'day'},
+      {id:'deep-read', name:'مطالعه عمیق', time:60, icon:'▤', zone:'day'},
+      {id:'sleep-book', name:'کتاب‌خوانی', time:20, icon:'▤', zone:'sleep'},
+      {id:'writing', name:'نوشتن آزاد', time:10, icon:'✎', zone:'sleep'}
+    ];
+    
+    const key = 'toloe-aram-v1';
+    const storage = (() => {
+      try {
+        const store = window.localStorage;
+        const probe = key + '-storage-test';
+        store.setItem(probe, '1');
+        store.removeItem(probe);
+        return { persistent:true, getItem:(k)=>store.getItem(k), setItem:(k,v)=>store.setItem(k,v) };
+      } catch {
+        const memory = Object.create(null);
+        return { persistent:false, getItem:(k)=>memory[k] ?? null, setItem:(k,v)=>{ memory[k]=String(v); } };
+      }
+    })();
+
+    const defaultLabels={wake:'روتین بیدارشدن',morning:'صبح',day:'روز',sleep:'روتین خواب'};
+    let state; try { state = JSON.parse(storage.getItem(key) || 'null'); } catch { state = null; } state ||= { focus:'corrective', done:{}, remaining:null, running:false, day:null, tasks:initialTasks, labels:defaultLabels, layout:'path', remindersEnabled:true, reminderSent:{} };
+    if(!Array.isArray(state.tasks) || !state.tasks.some(t=>t && t.zone)) { state={focus:'corrective',done:{},remaining:null,running:false,day:null,tasks:initialTasks,labels:defaultLabels,layout:'path'}; }
+    if(!state.labels) state.labels=defaultLabels;
+    if(!state.layout) state.layout='path';
+    if(typeof state.remindersEnabled !== 'boolean') state.remindersEnabled=true;
+    state.reminderSent ||= {};
+
+    state.studyLogs ||= {};
+    state.activeView ||= 'today';
+    state.selectedISO ||= null;
+    state.calendarStart ||= null;
+    let storagePersistent = storage.persistent;
+    const save = () => {
+      try { storage.setItem(key, JSON.stringify(state)); }
+      catch (err) { storagePersistent = false; showStorageWarning('ذخیره دائمی در این مرورگر ممکن نشد. از دکمه «پشتیبان» برای دانلود نسخه پشتیبان استفاده کن.'); }
+      updateStorageBadge();
+    };
+    function showStorageWarning(message) { const box=$('#storageWarning'); if(box){box.textContent=message;box.hidden=false;} }
+    function updateStorageBadge(){ const el=$('#storageBadge'); if(el){el.textContent=storagePersistent?'ذخیره روی این دستگاه فعال است':'ذخیره موقت؛ پشتیبان بگیر';el.classList.toggle('warn',!storagePersistent);} }
+    function exportBackup(){
+      const payload={app:'routine-residency',schemaVersion:3,exportedAt:new Date().toISOString(),state};
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='routine-residency-backup.json'; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500); flash('نسخه پشتیبان دانلود شد.');
+    }
+    async function importBackup(file){
+      try {
+        const payload=JSON.parse(await file.text()); const incoming=payload.state||payload;
+        if(!incoming || typeof incoming!=='object' || !Array.isArray(incoming.tasks) || !incoming.tasks.every(t=>t&&typeof t.id==='string'&&typeof t.name==='string'&&['wake','morning','day','sleep'].includes(t.zone))) throw new Error('invalid schema');
+        if(!incoming.tasks.some(t=>t.zone==='day')) throw new Error('missing daily task');
+        state={focus:incoming.focus||incoming.tasks.find(t=>t.zone==='day').id,done:incoming.done||{},remaining:Number.isFinite(incoming.remaining)?incoming.remaining:null,running:false,day:incoming.day||null,tasks:incoming.tasks.map(t=>({...t})),labels:{...defaultLabels,...(incoming.labels||{})},layout:incoming.layout||'path',studyLogs:incoming.studyLogs||{},activeView:['today','calendar','weekly'].includes(incoming.activeView)?incoming.activeView:'today',selectedISO:incoming.selectedISO||null,calendarStart:incoming.calendarStart||null,remindersEnabled:incoming.remindersEnabled!==false,reminderSent:incoming.reminderSent||{}};
+        save();
+        if(storagePersistent) { location.reload(); }
+        else { render(); setView(state.activeView||'today'); flash('اطلاعات بازیابی شد؛ برای نگهداری پس از بستن صفحه، سرور محلی را اجرا یا دوباره پشتیبان بگیر.'); }
+      } catch(err) { flash('فایل پشتیبان معتبر نیست یا ساختار آن شناخته نشد.'); }
+    }
+    $('#backup').addEventListener('click',exportBackup);
+    $('#restore').addEventListener('click',()=>$('#backupFile').click());
+    $('#backupFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0]; if(f) importBackup(f); e.target.value='';});
+    window.addEventListener('error',e=>showStorageWarning('خطای اجرای داشبورد: '+(e.message||'خطای نامشخص')));
+    window.addEventListener('unhandledrejection',e=>showStorageWarning('خطای اجرای یک عملیات: '+String(e.reason||'خطای نامشخص')));
+    if (!storage.persistent) $('#storageWarning').hidden=false;
+    const toFa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    const safe = s => String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+    const task = id => state.tasks.find(t => t.id === id);
+    const stamp = new Date().toLocaleDateString('fa-IR-u-ca-persian', {timeZone:'Asia/Tehran'});
+    function resetDay(){ const currentStamp=new Date().toLocaleDateString('fa-IR-u-ca-persian',{timeZone:'Asia/Tehran'}); if(state.day !== currentStamp){ state.done={}; state.remaining=null; state.running=false; state.day=currentStamp; save(); } }
+    function render(){
+      resetDay(); updateReminderMaster(); const daily=state.tasks.filter(t=>t.zone==='day'); const focus=task(state.focus)?.zone==='day' ? task(state.focus) : daily[0]; if(!focus) return; state.focus=focus.id;
+      const board=$('#daySections'); board.className=state.layout==='path'?'':'layout-'+state.layout; board.innerHTML=''; [['wake','فقط بعد از بیدارشدن'],['morning','کارهای برنامه‌دار صبحگاهی'],['day','کارهای امروز'],['sleep','پیش از خواب']].forEach(([zone,note])=>{ const part=document.createElement('section'); part.className='period'; part.innerHTML=`<div class="period-head"><h2>${safe(state.labels[zone])}</h2><span class="period-note">${note}</span></div>`; if(zone==='day'){const card=document.createElement('article');card.className='focus-card';card.innerHTML=`<div class="focus-label">انتخاب اصلی امروز</div><h3 class="focus-name">${safe(focus.name)}</h3><div class="focus-actions"><b class="timer" id="timer">۰۰:۰۰</b><button class="timer-btn" id="timerBtn">شروع تایمر</button></div><button class="hint" id="chooseFocus">تغییر انتخاب</button>`;part.append(card);} const list=document.createElement('section');list.className='task-list'; state.tasks.filter(t=>t.zone===zone&&t.id!==focus.id).forEach(t=>list.append(taskCard(t))); part.append(list); board.append(part); });
+      const total=state.tasks.length, count=state.tasks.filter(t=>!!state.done[t.id]).length; $('#score').textContent=`${toFa(count)} از ${toFa(total)}`; $('#bar').style.width=(count/total*100)+'%';
+      $('#timer').textContent=format(state.remaining === null ? focus.time*60 : state.remaining); $('#timerBtn').textContent=state.running?'توقف':'شروع تایمر'; $('#timerBtn').classList.toggle('running',state.running); $('#timerBtn').onclick=async()=>{ if(!state.running) await prepareSound(); state.running=!state.running; if(state.remaining===null) state.remaining=task(state.focus).time*60; save(); render(); }; $('#chooseFocus').onclick=openChoices;
+    }
+    function taskCard(t){ const anchor=t.zone==='wake'||t.zone==='sleep'; const el=document.createElement('article');el.className=(anchor?'anchor':'task')+' '+(state.done[t.id]?'done':'');el.innerHTML=`<span class="${anchor?'anchor-icon':'task-icon'}">${safe(t.icon)}</span><span><strong>${safe(t.name)}</strong><p>${toFa(t.time)} دقیقه${t.reminder?.enabled?' · یادآوری '+safe(t.reminder.time):''}</p></span><button class="check ${state.done[t.id]?'done':''}" aria-label="انجام شد">✓</button>`;el.querySelector('button').onclick=()=>toggle(t.id);return el; }
+    function toggle(id){ state.done[id]=!state.done[id]; save(); render(); if(state.done[id]) flash('ثبت شد؛ آفرین.'); }
+    function format(sec){ const m=Math.floor(sec/60), s=sec%60; return toFa(String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')); }
+    function flash(s){ $('#toast').textContent=s; $('#toast').classList.add('show'); setTimeout(()=>$('#toast').classList.remove('show'),2200); }
+    let audioContext;
+    async function prepareSound(){ try { audioContext ||= new (window.AudioContext||window.webkitAudioContext)(); if(audioContext.state==='suspended') await audioContext.resume(); } catch {} }
+    function playAlarm(){ if(!audioContext) return; const start=audioContext.currentTime; [0,.32,.64].forEach((offset,index)=>{ const oscillator=audioContext.createOscillator(), gain=audioContext.createGain(); oscillator.type='sine'; oscillator.frequency.value=index===1?660:520; gain.gain.setValueAtTime(.0001,start+offset); gain.gain.exponentialRampToValueAtTime(.18,start+offset+.03); gain.gain.exponentialRampToValueAtTime(.0001,start+offset+.25); oscillator.connect(gain).connect(audioContext.destination); oscillator.start(start+offset); oscillator.stop(start+offset+.27); }); }
+    function notifyDone(){ playAlarm(); flash('زمان تمام شد. کار اصلی امروز ثبت شد.'); }
+    function openChoices(){ const list=$('#choices'); list.innerHTML=''; state.tasks.filter(t=>t.zone==='day').forEach(t=>{const b=document.createElement('button');b.className='choice';b.textContent=`${t.name} — ${toFa(t.time)} دقیقه`;b.onclick=()=>{state.focus=t.id;state.remaining=null;state.running=false;save();$('#dialog').close();render();flash('اولویت امروز عوض شد.');};list.append(b);}); $('#dialog').showModal(); }
+    const layouts=[['path','مسیر روز','چهار بخش از بالا به پایین'],['pairs','روتین‌های کنار هم','بیدارشدن و صبح کنار هم؛ روز و خواب تمام‌عرض'],['sandwich','آغاز و پایان کنار هم','بیدارشدن و خواب کنار هم؛ صبح و روز تمام‌عرض'],['focus','تمرکز بر امروز','بیدارشدن و کار اصلی در بالا؛ صبح و خواب کنار هم'],['grid','نمای چهارتایی','هر چهار بخش کنار هم در یک نمای فشرده']];
+    function openLayouts(){ const root=$('#layoutOptions');root.innerHTML='';layouts.forEach(([id,title,description])=>{const b=document.createElement('button');b.className='layout-choice '+(state.layout===id?'active':'');b.innerHTML=`<strong>${title}</strong><span>${description}</span>`;b.onclick=()=>{state.layout=id;save();$('#layoutDialog').close();render();flash('چینش تازه اعمال شد.');};root.append(b);});$('#layoutDialog').showModal(); }
+    $('#layouts').onclick=openLayouts;$('#layoutClose').onclick=()=>$('#layoutDialog').close();
+    const zoneOptions = [['wake','روتین بیدارشدن'],['morning','صبح'],['day','روز'],['sleep','روتین خواب']];
+    const options = (list,chosen) => list.map(([value,label])=>`<option value="${value}" ${value===chosen?'selected':''}>${label}</option>`).join('');
+    let managerZone='wake', editingTaskId=null;
+    function renderManager(){ const tabs=$('#managerTabs'), rows=$('#managerRows'); tabs.innerHTML=''; rows.innerHTML=''; zoneOptions.forEach(([zone,label])=>{const tab=document.createElement('button');tab.className='manager-tab '+(zone===managerZone?'active':'');tab.textContent=label;tab.onclick=()=>{managerZone=zone;renderManager();};tabs.append(tab);}); $('#zoneTitle').value=state.labels[managerZone]; state.tasks.filter(t=>t.zone===managerZone).forEach(t=>rows.append(managerCard(t))); }
+    function managerCard(t){ const row=document.createElement('article'); row.className='manager-card'; row.innerHTML=`<button class="manager-card-open"><span class="manager-card-icon">${safe(t.icon)}</span><span><strong>${safe(t.name)}</strong><small>${toFa(t.time)} دقیقه${t.reminder?.enabled?' · '+safe(t.reminder.time)+' / '+(t.reminder.days||[]).length+' روز':''}</small></span></button><span class="manager-arrows"><button aria-label="بالا">↑</button><button aria-label="پایین">↓</button></span>`; row.querySelector('.manager-card-open').onclick=()=>openTaskEditor(t.id); const [up,down]=row.querySelectorAll('.manager-arrows button'); up.onclick=()=>moveTask(t.id,-1);down.onclick=()=>moveTask(t.id,1);return row; }
+    function moveTask(id,direction){ const index=state.tasks.findIndex(t=>t.id===id); let target=index+direction; while(target>=0&&target<state.tasks.length&&state.tasks[target].zone!==managerZone) target+=direction; if(target<0||target>=state.tasks.length) return; [state.tasks[index],state.tasks[target]]=[state.tasks[target],state.tasks[index]];save();renderManager();render(); }
+    function openManager(){ managerZone='wake';renderManager();$('#manager').showModal(); }
+    function openTaskEditor(id=null){
+      editingTaskId=id; const t=id?task(id):{name:'',time:10,icon:'✦',zone:managerZone};
+      const reminder=t.reminder||{enabled:false,time:'09:00',days:[],leadMinutes:10};
+      $('#taskEditorTitle').textContent=id?'ویرایش کار':'کار تازه'; $('#taskName').value=t.name;$('#taskTime').value=t.time;$('#taskIcon').value=t.icon;$('#taskZone').innerHTML=options(zoneOptions,t.zone);
+      $('#taskReminderEnabled').checked=!!reminder.enabled;$('#reminderFields').hidden=!reminder.enabled;$('#taskReminderTime').value=reminder.time||'09:00';$('#taskReminderLead').value=String([5,10,15].includes(Number(reminder.leadMinutes))?Number(reminder.leadMinutes):10);
+      document.querySelectorAll('[name="reminderDay"]').forEach(c=>c.checked=(reminder.days||[]).includes(Number(c.value)));
+      $('#taskReminderEnabled').onchange=()=>{$('#reminderFields').hidden=!$('#taskReminderEnabled').checked;};
+      $('#taskDelete').style.display=id?'block':'none';$('#taskEditor').showModal();$('#taskName').focus();
+    }
+    $('#manage').onclick=openManager;
+    $('#managerAdd').onclick=()=>openTaskEditor();
+    $('#managerClose').onclick=()=>$('#manager').close();
+    $('#saveZoneTitle').onclick=()=>{state.labels[managerZone]=$('#zoneTitle').value.trim()||defaultLabels[managerZone];save();render();flash('عنوان بخش ذخیره شد.');};
+    $('#taskCancel').onclick=()=>$('#taskEditor').close();
+    $('#taskSave').onclick=()=>{
+      const name=$('#taskName').value.trim(),time=Number($('#taskTime').value),icon=$('#taskIcon').value.trim()||'✦',zone=$('#taskZone').value;
+      const reminderEnabled=$('#taskReminderEnabled').checked, reminderTime=$('#taskReminderTime').value;
+      const reminderDays=[...document.querySelectorAll('[name="reminderDay"]:checked')].map(c=>Number(c.value));
+      const leadMinutes=Number($('#taskReminderLead').value);
+      if(!name||!Number.isFinite(time)||time<1||time>480){flash('نام و مدت فعالیت را درست وارد کن.');return;}
+      if(reminderEnabled&&(!reminderTime||!reminderDays.length)){flash('برای یادآوری، ساعت و حداقل یک روز را انتخاب کن.');return;}
+      if(!state.tasks.some(t=>t.id!==editingTaskId&&t.zone==='day')&&zone!=='day'){flash('دست‌کم یک کار در بخش روز لازم است.');return;}
+      const reminder={enabled:reminderEnabled,time:reminderTime||'09:00',days:reminderDays,leadMinutes};
+      if(editingTaskId){Object.assign(task(editingTaskId),{name,time,icon,zone,reminder});}
+      else{state.tasks.push({id:'task-'+Date.now(),name,time,icon,zone,reminder});}
+      if(!state.tasks.some(t=>t.id===state.focus&&t.zone==='day')) state.focus=state.tasks.find(t=>t.zone==='day')?.id;
+      state.remaining=null;state.running=false;save();$('#taskEditor').close();managerZone=zone;renderManager();render();flash('کار و تنظیم یادآوری ذخیره شد.');
+    };
+    $('#taskDelete').onclick=()=>{if(!editingTaskId)return;const target=task(editingTaskId);if(target.zone==='day'&&state.tasks.filter(t=>t.zone==='day').length===1){flash('دست‌کم یک کار در بخش روز لازم است.');return;}if(confirm('این کار حذف شود؟')){state.tasks=state.tasks.filter(t=>t.id!==editingTaskId);delete state.done[editingTaskId];if(state.focus===editingTaskId)state.focus=state.tasks.find(t=>t.zone==='day')?.id;save();$('#taskEditor').close();renderManager();render();flash('کار حذف شد.');}};
+    // --- Stage A: in-dashboard scheduled reminders (requires this page to remain open) ---
+    const TZ='Asia/Tehran';
+    const reminderShiftRules=[
+      {day:0,start:20*60,end:26*60,name:'سینا'},       // Saturday 20:00 -> Sunday 02:00
+      {day:1,start:20*60,end:32*60,name:'پارسیان'},   // Sunday 20:00 -> Monday 08:00
+      {day:3,start:14*60,end:20*60,name:'پردیس'},    // Tuesday 14:00 -> 20:00
+      {day:4,start:20*60,end:24*60,name:'دی'},       // Wednesday 20:00 -> Thursday 00:00
+      {day:5,start:8*60,end:14*60,name:'سینا'},      // Thursday 08:00 -> 14:00
+      {day:6,start:8*60,end:14*60,name:'پارسیان'},   // Friday 08:00 -> 14:00
+      {day:6,start:20*60,end:32*60,name:'پارسیان'}   // Friday 20:00 -> Saturday 08:00
+    ];
+    const reminderNowFmt=new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+    function reminderNowParts(date=new Date()){return partsOf(reminderNowFmt,date);}
+    function civilMinute(iso,hour,minute){const [y,m,d]=iso.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d,hour,minute)/60000);}
+    function shiftIntervalsAround(iso){
+      const base=dateFromIso(iso), out=[];
+      for(let offset=-1;offset<=1;offset++){
+        const day=addUtcDays(base,offset), ix=weekdayIndex(day), dayIso=isoDate(day), baseMinute=civilMinute(dayIso,0,0);
+        reminderShiftRules.filter(r=>r.day===ix).forEach(r=>out.push({start:baseMinute+r.start,end:baseMinute+r.end,name:r.name}));
+      }
+      return out;
+    }
+    function overlapsShift(startMinute,endMinute){return shiftIntervalsAround(isoDate(new Date(startMinute*60000))).some(s=>startMinute<s.end&&endMinute>s.start);}
+    function insideShift(minute){return shiftIntervalsAround(isoDate(new Date(minute*60000))).some(s=>minute>=s.start&&minute<s.end);}
+    function reminderKey(taskId,iso,time,lead){return [taskId,iso,time,lead].join('|');}
+    function addReminderNotice(t,iso,scheduledTime,lead){
+      const stack=$('#reminderStack'), card=document.createElement('article');card.className='reminder-card';
+      card.innerHTML=`<strong>یادآوری فعالیت</strong><p>${safe(t.name)} · شروع ${safe(scheduledTime)} · ${toFa(lead)} دقیقه دیگر</p><div class="reminder-actions"><button type="button" class="reminder-done">ثبت انجام</button><button type="button" class="dismiss">بستن</button></div>`;
+      card.querySelector('.reminder-done').onclick=()=>{state.done[t.id]=true;save();render();card.remove();flash('انجام فعالیت ثبت شد.');};
+      card.querySelector('.dismiss').onclick=()=>card.remove();stack.append(card);
+    }
+    function checkScheduledReminders(){
+      if(!state.remindersEnabled) return;
+      const now=reminderNowParts(), todayIsoLocal=`${now.year}-${now.month}-${now.day}`, nowMinute=civilMinute(todayIsoLocal,Number(now.hour),Number(now.minute));
+      const candidateDates=[todayIso(),isoDate(addUtcDays(dateFromIso(todayIso()),1))];
+      const sent=state.reminderSent||(state.reminderSent={});let changed=false;
+      for(const t of state.tasks){
+        if(state.done[t.id]) continue;
+        const r=t.reminder;if(!r?.enabled||!Array.isArray(r.days)||!r.days.length||!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time||''))continue;
+        const [hh,mm]=r.time.split(':').map(Number),lead=[5,10,15].includes(Number(r.leadMinutes))?Number(r.leadMinutes):10;
+        for(const iso of candidateDates){
+          if(!r.days.includes(dayIxFromIso(iso)))continue;
+          const start=civilMinute(iso,hh,mm), fireAt=start-lead, delta=nowMinute-fireAt;
+          if(delta<0||delta>=3)continue; // tolerate small browser timer delays; never replay stale reminders
+          const end=start+Math.max(1,Number(t.time)||1);
+          if(insideShift(fireAt)||overlapsShift(start,end))continue;
+          const id=reminderKey(t.id,iso,r.time,lead);if(sent[id])continue;
+          sent[id]=new Date().toISOString();addReminderNotice(t,iso,r.time,lead);changed=true;
+        }
+      }
+      if(changed){const keys=Object.keys(sent).sort((a,b)=>String(sent[a]).localeCompare(String(sent[b])));keys.slice(0,Math.max(0,keys.length-350)).forEach(k=>delete sent[k]);save();}
+    }
+    function updateReminderMaster(){const b=$('#reminderMaster');if(!b)return;const count=state.tasks.filter(t=>t.reminder?.enabled).length;b.textContent=state.remindersEnabled?`یادآورها: روشن (${toFa(count)})`:'یادآورها: خاموش';b.title='فعال یا غیرفعال‌کردن همه یادآورهای داخل داشبورد';}
+    $('#reminderMaster').onclick=()=>{state.remindersEnabled=!state.remindersEnabled;save();updateReminderMaster();flash(state.remindersEnabled?'یادآورها فعال شدند.':'همه یادآورها متوقف شدند.');};
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkScheduledReminders();});
+    window.addEventListener('focus',checkScheduledReminders);
+    setInterval(checkScheduledReminders,15000);
+    updateReminderMaster();
+
+    $('#close').onclick=()=>$('#dialog').close();
+    setInterval(()=>{ if(!state.running) return; if(state.remaining>1){state.remaining--;save();$('#timer').textContent=format(state.remaining);} else {state.remaining=0;state.running=false;state.done[state.focus]=true;save();render();notifyDone();} },1000);
+    function updateClock(){ const previousDay=state.day; resetDay(); if(previousDay && previousDay!==state.day) render(); const now=new Date(); const opts={timeZone:'Asia/Tehran'}; $('#date').textContent=now.toLocaleDateString('fa-IR-u-ca-persian',{...opts,weekday:'long',day:'numeric',month:'long'}); $('#clock').textContent=now.toLocaleTimeString('fa-IR',{...opts,hour:'2-digit',minute:'2-digit'}); }
+
+    // --- Integrated Jalali calendar, rotating shift pattern and study-capacity log ---
+    const weekdayNames=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنج‌شنبه','جمعه'];
+    const studyTargets=[2.5,1,0,3,3,2,0];
+    const studyTargetNotes=['۲.۵ ساعت','۱ ساعت','صفر؛ ۰.۵ اختیاری','۳ ساعت','۳ ساعت','۲ ساعت؛ تا ۳ اختیاری','صفر ساعت'];
+    const weeklyShiftText=[
+      [{name:'پایان شیفت پارسیان',time:'۰۰:۰۰-۰۸:۰۰'},{name:'شیفت سینا',time:'۲۰:۰۰-۰۲:۰۰'}],
+      [{name:'شیفت پارسیان',time:'۲۰:۰۰-۰۸:۰۰ دوشنبه'}],
+      [{name:'پایان شیفت پارسیان',time:'تا ۰۸:۰۰'}],
+      [{name:'شیفت پردیس',time:'۱۴:۰۰-۲۰:۰۰'}],
+      [{name:'شیفت دی',time:'۲۰:۰۰-۰۰:۰۰'}],
+      [{name:'شیفت سینا',time:'۰۸:۰۰-۱۴:۰۰'}],
+      [{name:'شیفت پارسیان',time:'۰۸:۰۰-۱۴:۰۰'},{name:'شیفت پارسیان',time:'۲۰:۰۰-۰۸:۰۰ شنبه'}]
+    ];
+    const tehranGregorianFmt=new Intl.DateTimeFormat('en-US-u-ca-gregory-nu-latn',{timeZone:TZ,year:'numeric',month:'numeric',day:'numeric'});
+    const jalaliPartsFmt=new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn',{timeZone:TZ,year:'numeric',month:'numeric',day:'numeric'});
+    const jalaliLabelFmt=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:TZ,year:'numeric',month:'long'});
+    const jalaliDayFmt=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:TZ,day:'numeric'});
+    const fullDateFmt=new Intl.DateTimeFormat('fa-IR-u-ca-persian',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    function partsOf(fmt,date){return Object.fromEntries(fmt.formatToParts(date).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));}
+    function iranCivilDate(date){const p=partsOf(tehranGregorianFmt,date);return new Date(Date.UTC(+p.year,+p.month-1,+p.day,12));}
+    function jalaliParts(date){const p=partsOf(jalaliPartsFmt,date);return {year:+p.year,month:+p.month,day:+p.day};}
+    function jalaliMonthStart(date){let d=iranCivilDate(date);for(let i=0;i<32;i++){if(jalaliParts(d).day===1)return d;d.setUTCDate(d.getUTCDate()-1);}return d;}
+    function isoDate(date){return date.toISOString().slice(0,10);}
+    function weekdayIndex(date){return (date.getUTCDay()+1)%7;}
+    function addUtcDays(date,n){const d=new Date(date);d.setUTCDate(d.getUTCDate()+n);return d;}
+    function todayIso(){return isoDate(iranCivilDate(new Date()));}
+    function currentMonthStart(){return jalaliMonthStart(new Date());}
+    function nextMonthStart(start,delta){return jalaliMonthStart(addUtcDays(start,delta>0?31:-1));}
+    function dateFromIso(iso){const [y,m,d]=iso.split('-').map(Number);return new Date(Date.UTC(y,m-1,d,12));}
+    function shiftsFor(date){
+      const ix=weekdayIndex(date);
+      const map=[
+        [{name:'پایان شیفت پارسیان',time:'۰۰:۰۰ تا ۰۸:۰۰'},{name:'شیفت سینا',time:'۲۰:۰۰ تا ۰۲:۰۰ بامداد'}],
+        [{name:'شیفت پارسیان',time:'۲۰:۰۰ تا ۰۸:۰۰ دوشنبه'}],
+        [{name:'پایان شیفت پارسیان',time:'تا ۰۸:۰۰'}],
+        [{name:'شیفت پردیس',time:'۱۴:۰۰ تا ۲۰:۰۰'}],
+        [{name:'شیفت دی',time:'۲۰:۰۰ تا ۰۰:۰۰'}],
+        [{name:'شیفت سینا',time:'۰۸:۰۰ تا ۱۴:۰۰'}],
+        [{name:'شیفت پارسیان',time:'۰۸:۰۰ تا ۱۴:۰۰'},{name:'شیفت پارسیان',time:'۲۰:۰۰ تا ۰۸:۰۰ شنبه'}]
+      ];
+      return map[ix];
+    }
+    function dayIxFromIso(iso){return weekdayIndex(dateFromIso(iso));}
+    function fmtNumber(n){return Number(n).toLocaleString('fa-IR',{maximumFractionDigits:2});}
+    function renderCalendar(){
+      if(!state.calendarStart) state.calendarStart=isoDate(currentMonthStart());
+      if(!state.selectedISO) state.selectedISO=todayIso();
+      const start=dateFromIso(state.calendarStart);
+      const month=jalaliParts(start);
+      $('#monthTitle').textContent=jalaliLabelFmt.format(start);
+      const grid=$('#calendarGrid');grid.innerHTML='';
+      weekdayNames.forEach(w=>{const h=document.createElement('div');h.className='weekday';h.textContent=w;grid.append(h);});
+      const today=todayIso();
+      const firstOffset=weekdayIndex(start);
+      let total=0;
+      for(let i=0;i<42;i++){
+        const d=addUtcDays(start,i-firstOffset), p=jalaliParts(d), iso=isoDate(d), inside=p.year===month.year&&p.month===month.month;
+        const shifts=shiftsFor(d), actual=Number(state.studyLogs[iso]||0);
+        if(inside) total+=actual;
+        const b=document.createElement('button');b.className='cal-day'+(!inside?' outside':'')+(iso===today?' today':'')+(iso===state.selectedISO?' selected':'');
+        b.innerHTML=`<span class="day-number">${jalaliDayFmt.format(d)}</span><span class="day-dot">${shifts.length?'● شیفت':''}</span><span class="study-dot">${actual?fmtNumber(actual)+'س':''}</span>`;
+        b.title=fullDateFmt.format(d);b.onclick=()=>{state.selectedISO=iso;save();renderCalendar();};grid.append(b);
+      }
+      $('#monthActual').textContent=fmtNumber(total);
+      renderDayDetail(state.selectedISO);
+    }
+    function renderDayDetail(iso){
+      const date=dateFromIso(iso),ix=dayIxFromIso(iso), shifts=shiftsFor(date), actual=Number(state.studyLogs[iso]||0);
+      const target=studyTargets[ix], note=studyTargetNotes[ix];
+      const targetText=target===0?'بدون هدف پایه':fmtNumber(target)+' ساعت';
+      const shiftHtml=shifts.length?shifts.map(s=>`<div class="shift-row"><span>${safe(s.name)}</span><small>${safe(s.time)}</small></div>`).join(''):'<div class="shift-row"><span>شیفت ثابتی ثبت نشده</span></div>';
+      $('#dayDetail').innerHTML=`<div class="detail-title">${fullDateFmt.format(date)}</div><div class="detail-meta"><span class="detail-chip">ظرفیت مطالعه: ${targetText}</span><span class="detail-chip">${note}</span><span class="detail-chip">اجرا: ${fmtNumber(actual)} ساعت</span></div><div class="shift-list">${shiftHtml}</div><div class="study-entry"><label>ساعت مطالعه واقعی<input id="studyLogInput" type="number" min="0" max="24" step="0.25" value="${actual||''}" placeholder="مثلاً ۲.۵"></label><button id="saveStudyLog">ثبت مطالعه</button><button id="clearStudyLog" style="background:#eadfd0;color:#594833">پاک‌کردن</button></div>`;
+      $('#saveStudyLog').onclick=()=>{const v=Number($('#studyLogInput').value);if(!Number.isFinite(v)||v<0||v>24){flash('ساعت مطالعه باید بین صفر تا ۲۴ باشد.');return;}state.studyLogs[iso]=v;save();renderCalendar();flash('ساعت مطالعه ذخیره شد.');};
+      $('#clearStudyLog').onclick=()=>{delete state.studyLogs[iso];save();renderCalendar();flash('ثبت این روز پاک شد.');};
+    }
+    function renderWeekly(){const rows=$('#weeklyRows');rows.innerHTML='';weekdayNames.forEach((day,i)=>{const tr=document.createElement('tr');const shifts=weeklyShiftText[i].map(s=>`<div class=\"week-shift-item\"><b>${safe(s.name)}</b><small dir=\"ltr\">${safe(s.time)}</small></div>`).join('');tr.innerHTML=`<td>${day}</td><td class=\"shift-cell\">${shifts}</td><td>${studyTargetNotes[i]}</td>`;rows.append(tr);});}
+    function setView(view){state.activeView=view;save();document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('#routinePanel').hidden=view!=='today';$('#calendarPanel').hidden=view!=='calendar';$('#weeklyPanel').hidden=view!=='weekly';if(view==='calendar')renderCalendar();if(view==='weekly')renderWeekly();}
+    document.querySelectorAll('.view-btn').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+    $('#prevMonth').onclick=()=>{state.calendarStart=isoDate(nextMonthStart(dateFromIso(state.calendarStart),-1));state.selectedISO=state.calendarStart;save();renderCalendar();};
+    $('#nextMonth').onclick=()=>{state.calendarStart=isoDate(nextMonthStart(dateFromIso(state.calendarStart),1));state.selectedISO=state.calendarStart;save();renderCalendar();};
+    // Preserve the user's existing Routine.html task set, ordering, layouts and edits.
+    if(!state.studyLogs) state.studyLogs={};
+    if(!state.activeView) state.activeView='today';
+    if(!state.selectedISO) state.selectedISO=todayIso();
+    if(!state.calendarStart) state.calendarStart=isoDate(currentMonthStart());
+
+    updateStorageBadge(); updateClock(); setInterval(updateClock,1000); render(); setView(state.activeView); updateReminderMaster(); checkScheduledReminders();
+  </script>
+</body>
+</html>
