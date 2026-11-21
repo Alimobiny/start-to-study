@@ -1,12 +1,12 @@
-# TEST REPORT — Reminder Engine (Stage A + B) & PWA (Stage C)
+# TEST REPORT — Reminder Engine (Stage A + B), PWA (Stage C) & Exact Azar Plan
 
 ## Local reproducible suite (current)
 
-**Release:** Stage C / PWA packaging  
+**Release:** exact Azar 1405 day plan (Aban 30 – Dey 4)  
 **Runner:** Node.js 24 (vm sandbox, no browser, no downloads)  
 **Command:** `node tests/run-tests.mjs` (or double-click `run_tests.bat`)  
 **Timezone:** logic exercised at fixed Asia/Tehran instants via a controllable clock  
-**Result:** 26 / 26 PASS — verified on the user's Windows machine (2026-11-21)
+**Result:** 34 / 34 PASS — verified on the user's Windows machine (2026-11-21)
 
 | Test | Result |
 |---|---|
@@ -36,6 +36,14 @@
 | `index.html` links the manifest and registers the SW behind a protocol guard | PASS |
 | `sw.js` passes `node --check` | PASS |
 | SW install precaches the shell; activate cleans old cache versions | PASS |
+| exactPlan covers exactly 2026-11-21 through 2026-12-25 | PASS |
+| Sina nights run to 02:00, including the new Monday night of Dey 23 | PASS |
+| Engine uses exact data where it differs from the weekly pattern | PASS |
+| Night shifts spill into the next morning (Sunday night → Monday tail) | PASS |
+| Calendar display reflects the exact plan | PASS |
+| Reverts to the weekly pattern after Dey 4 | PASS |
+| Reminder suppressed by the new Monday-night shift, fires in exact free slots | PASS |
+| Rest and events never suppress; sessions and the installment exist in day data | PASS |
 
 Method: the inline `<script>` is extracted from `index.html`, syntax-checked with
 `node --check`, then executed inside a Node `vm` context with minimal DOM,

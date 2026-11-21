@@ -56,7 +56,11 @@
 
 **Important:** برنامه فقط ظرفیت زمانی را نشان می‌دهد. نوع مطالعه، منابع، مرور، تست و محتوای مطالعاتی را به کاربر تحمیل نکن.
 
-## 5. Fixed work-shift pattern (locked source for shift conflict checks)
+## 5. Shift pattern — exact Azar 1405 plan first, fixed pattern as fallback
+
+**Exact plan (2026-11-21 .. 2026-12-25, Aban 30 – Dey 4 1405):** transcribed from the user's Word table «بازه زمانی» into the `exactPlan` constant in `index.html`. It governs the calendar display and the reminder shift-conflict engine day by day; dates inside the range with no entry are explicitly shift-free. Conventions (user-confirmed): Sina nights run 20:00–02:00 next day (including the one-off Monday night of 2026-12-14), Parsian nights 20:00–08:00 next day, Di nights end at 24:00. Grid tails at 06:00–08:00 are the previous night shift itself; the two orphan tails (Saturdays of Azar 14/28) are stored verbatim. Wednesday «امادگی جلسه»/«جلسه» and the one-off «پرداخت اقساط» (2026-12-17 16:00–18:00) are display-only in the calendar day detail; «استراحت» blocks are display-only and never suppress reminders. After 2026-12-25 the fixed weekly pattern below applies again (user choice).
+
+## 5b. Fixed work-shift pattern (fallback outside the exact plan)
 
 - Saturday / شنبه: Sina ۲۰:۰۰–۰۲:۰۰ Sunday.
 - Sunday / یکشنبه: Parsian ۲۰:۰۰–۰۸:۰۰ Monday.
@@ -78,7 +82,7 @@ Previous HTML builds failed because of JavaScript Temporal Dead Zone issues:
 
 These caused the dashboard not to render or not to start. The current Stage A release has those initialization problems addressed. Do not copy code from earlier broken HTML versions unless necessary; use the `index.html` in this package as the current source of truth.
 
-## 7. Current release: Stage A + Stage B + Stage C implemented
+## 7. Current release: Stage A + B + C + exact Azar 1405 plan implemented
 
 The latest print schedule artifacts produced earlier in the project are also available as a four-week, single-page A4 RTL Word/PDF template using B Nazanin. Current Stage A work only modifies the HTML dashboard; do not unnecessarily regenerate those Word/PDF files unless requested.
 
@@ -171,13 +175,13 @@ UI additions:
 Two layers:
 
 1. **Local reproducible suite (run before/after every change):**
-   `node tests/run-tests.mjs` — **26/26 passed** on the user's Windows machine (2026-11-21).
+   `node tests/run-tests.mjs` — **34/34 passed** on the user's Windows machine (2026-11-21).
    Covers script syntax, initial state shape, all seven shift intervals incl. overnight spans,
    end-exclusive boundaries, free-interval checks, reminder firing/dedup/shift-suppression/
-   done-skip/global-pause, Stage B system-notification fire/off/denied/missing-API/permission-button
-   paths, backup schemaVersion-4 payload, restore preserving the notification preference,
-   persistence round-trip, and Stage C manifest/install-fields/icon-PNG/protocol-guard/
-   service-worker install+activate behaviour.
+   done-skip/global-pause, Stage B system-notification paths, backup schemaVersion-4,
+   Stage C manifest/service-worker behaviour, and the exact Azar 1405 plan (range coverage,
+   night conventions, pattern differences, morning tails, display, revert after Dey 4,
+   rest/events never suppressing).
 2. **Prior browser-level run (container, 2026-11):** **19/19 passed** — details in `TEST_REPORT.md`.
 
 Covered:

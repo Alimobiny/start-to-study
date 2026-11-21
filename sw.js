@@ -9,7 +9,7 @@
 // changes, so previously installed apps pick up the new copy on next launch
 // while the server is running.
 
-const CACHE = 'toloe-aram-pwa-v1';
+const CACHE = 'toloe-aram-pwa-v2';
 const SHELL = [
   './',
   './index.html',

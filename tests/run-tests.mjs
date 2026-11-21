@@ -179,6 +179,7 @@ const bridge = `
   set state(v) { state = v; },
   save, checkScheduledReminders, shiftIntervalsAround, overlapsShift, insideShift,
   civilMinute, reminderKey, dayIxFromIso, isoDate, dateFromIso,
+  get exactPlan() { return exactPlan; }, shiftsFor, inExactRange,
 };`;
 try {
   vm.runInContext(appCode + bridge, sandbox, { filename: 'index.html-inline' });
@@ -513,6 +514,8 @@ test('sw.js passes node --check', () => {
 
 test('sw install precaches the shell; activate cleans old cache versions', async () => {
   const swCode = fs.readFileSync(path.join(rootDir, 'sw.js'), 'utf8');
+  const cacheName = (swCode.match(/const CACHE = '([^']+)';/) || [])[1];
+  assert(cacheName === 'toloe-aram-pwa-v2', `cache should be bumped to v2, got ${cacheName}`);
   const added = [];
   const deleted = [];
   let claimed = false;
@@ -525,7 +528,7 @@ test('sw install precaches the shell; activate cleans old cache versions', async
   const swSandbox = {
     caches: {
       open: async () => cacheMock,
-      keys: async () => ['toloe-aram-pwa-v1', 'toloe-aram-pwa-v0', 'toloe-aram-pwa-v0-old'],
+      keys: async () => [cacheName, cacheName + '-old1', cacheName + '-old2'],
       delete: async (key) => { deleted.push(key); return true; },
     },
     location: { origin: 'http://127.0.0.1:8765' },
@@ -555,10 +558,101 @@ test('sw install precaches the shell; activate cleans old cache versions', async
   for (const url of ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']) {
     assert(added.includes(url), `shell asset not precached: ${url}`);
   }
-  assert(deleted.includes('toloe-aram-pwa-v0') && deleted.includes('toloe-aram-pwa-v0-old'),
+  assert(deleted.includes(cacheName + '-old1') && deleted.includes(cacheName + '-old2'),
     'old cache versions must be deleted');
-  assert(!deleted.includes('toloe-aram-pwa-v1'), 'current cache must survive activate');
+  assert(!deleted.includes(cacheName), 'current cache must survive activate');
   assert(claimed === true, 'activate should claim clients');
+});
+
+// ------------------------------------------------ Exact Azar 1405 day plan
+
+test('exactPlan covers exactly 2026-11-21 through 2026-12-25', () => {
+  const keys = Object.keys(app.exactPlan).sort();
+  assert(keys.length === 32, `expected 32 dated entries, got ${keys.length}`);
+  assert(keys[0] === '2026-11-21' && keys[keys.length - 1] === '2026-12-24', 'boundary keys');
+  for (const k of keys) assert(k >= '2026-11-21' && k <= '2026-12-25', 'date out of range: ' + k);
+  // Three days are intentionally shift- and event-free, yet still inside the exact
+  // range (so the weekly pattern must NOT apply to them):
+  for (const free of ['2026-11-30', '2026-12-21', '2026-12-25']) {
+    assert(!app.exactPlan[free], `${free} should have no entry`);
+    assert(app.inExactRange(free), `${free} must still count as exact-range`);
+    assert(app.shiftsFor(app.dateFromIso(free)).length === 0, `${free} must display no shifts`);
+  }
+});
+
+test('Sina nights run to 02:00, including the new Monday night of Dey 23', () => {
+  assert(app.exactPlan['2026-11-21'].sh.some(([s, e, n]) => s === 1200 && e === 1560 && n === 'سینا'),
+    'Saturday night Sina 20:00-02:00');
+  assert(app.exactPlan['2026-12-14'].sh.some(([s, e, n]) => s === 1200 && e === 1560 && n === 'سینا'),
+    'one-off Monday night Sina');
+  assert(app.exactPlan['2026-11-22'].sh.some(([s, e, n]) => s === 1200 && e === 1920 && n === 'پارسیان'),
+    'Parsian nights run to 08:00 next day');
+  assert(app.exactPlan['2026-12-02'].sh.some(([s, e, n]) => s === 1200 && e === 1440 && n === 'دی'),
+    'Di nights end at midnight');
+});
+
+test('engine uses exact data where it differs from the weekly pattern', () => {
+  // Monday 2026-12-14 (Dey 23): exact Sina night, pattern says Mondays are free:
+  const monBase = app.civilMinute('2026-12-14', 0, 0);
+  assert(app.insideShift(monBase + 21 * 60) === true, '21:00 on Mon Dec 14 is inside exact Sina night');
+  const patMonBase = app.civilMinute('2027-01-11', 0, 0);
+  assert(app.insideShift(patMonBase + 21 * 60) === false, 'pattern Mondays stay free');
+  // Friday 2026-12-04 (Dey 13): Di morning instead of the pattern Parsian:
+  const friBase = app.civilMinute('2026-12-04', 0, 0);
+  assert(app.overlapsShift(friBase + 10 * 60, friBase + 12 * 60) === true, 'Di 08:00-14:00 that Friday');
+  assert(!app.shiftIntervalsAround('2026-12-04').some(iv => iv.name === 'پارسیان' && iv.start === friBase + 8 * 60),
+    'no Parsian morning on that Friday');
+  assert(app.overlapsShift(friBase + 15 * 60, friBase + 16 * 60) === false, 'that Friday afternoon is free');
+});
+
+test('night shifts spill into the next morning (Sunday night -> Monday tail)', () => {
+  const monBase = app.civilMinute('2026-11-23', 0, 0);  // Azar 2
+  const list = app.shiftIntervalsAround('2026-11-23');
+  assert(list.some(iv => iv.name === 'پارسیان' && iv.start < monBase && iv.end === monBase + 8 * 60),
+    'Sunday-night Parsian must cover Monday 00:00-08:00');
+});
+
+test('calendar display reflects the exact plan', () => {
+  const monRows = app.shiftsFor(app.dateFromIso('2026-12-14'));
+  assert(monRows.some(r => r.name === 'شیفت سینا' && r.time.includes('۲۰:۰۰')), 'Sina night row on Dec 14');
+  const azar2Rows = app.shiftsFor(app.dateFromIso('2026-11-23'));
+  assert(azar2Rows.some(r => r.name === 'پایان شیفت پارسیان'), 'tail row on Azar 2');
+  assert(app.shiftsFor(app.dateFromIso('2027-01-08')).length > 0, 'pattern Fridays keep their rows');
+});
+
+test('reverts to the weekly pattern after Dey 4', () => {
+  const friBase = app.civilMinute('2027-01-08', 0, 0);
+  assert(app.overlapsShift(friBase + 9 * 60, friBase + 11 * 60) === true, 'pattern Parsian 08:00-14:00');
+});
+
+test('reminder suppressed by the new Monday-night shift, fires in exact free slots', () => {
+  resetScenario();
+  configureStudyReminder({ time: '21:00', days: [2], lead: 10 });  // Mondays
+  setNow(2026, 11, 14, 17, 21);  // Mon Dec 14, 20:51 Tehran
+  app.checkScheduledReminders();
+  assert(cardCount() === 0, 'exact Sina night must suppress (pattern alone would not)');
+  assert(!app.state.reminderSent[app.reminderKey('study', '2026-12-14', '21:00', 10)],
+    'suppressed occurrence must not be recorded');
+  resetScenario();
+  stackEl().children.length = 0;
+  configureStudyReminder({ time: '10:00', days: [2], lead: 10 });
+  setNow(2026, 11, 7, 6, 21);  // Mon Dec 7 (Azar 16, rest-only), 09:51 Tehran
+  app.checkScheduledReminders();
+  assert(cardCount() === 1, 'rest-only Monday must let the reminder fire');
+});
+
+test('rest and events never suppress; sessions and the installment exist in day data', () => {
+  assert(app.exactPlan['2026-11-23'].rest?.[0]?.[0] === 480, 'Azar 2 rest block present');
+  resetScenario();
+  configureStudyReminder({ time: '09:00', days: [2], lead: 10 });
+  setNow(2026, 10, 23, 5, 21);  // Mon Nov 23 (Azar 2), 08:51 Tehran
+  app.checkScheduledReminders();
+  assert(cardCount() === 1, 'rest is informational, not a shift');
+  const wed = app.exactPlan['2026-12-16'];
+  assert(wed.ev.some(([s, e, n]) => n === 'امادگی جلسه' && s === 600 && e === 720), 'prep block');
+  assert(wed.ev.some(([s, e, n]) => n === 'جلسه' && s === 840 && e === 960), 'session block');
+  const thu = app.exactPlan['2026-12-17'];
+  assert(thu.ev.some(([s, e, n]) => n === 'پرداخت اقساط' && s === 960 && e === 1080), 'installment event');
 });
 
 // ------------------------------------------------------------------- report
