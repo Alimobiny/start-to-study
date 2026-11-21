@@ -99,7 +99,7 @@ Files in this package:
 - `PROJECT_HANDOFF.md` — this project context.
 - `TEST_REPORT.md` — test record.
 
-**Version control:** the folder is now a git repository. Commit 1 = baseline of the delivered Stage A package; commit 2 = the infrastructure repair above. `index.html` was not modified in that repair.
+**Version control & deployment:** the folder is a git repository pushed to `https://github.com/Alimobiny/start-to-study` (public since 2026-11-21, by user choice). GitHub Pages serves the app from the `main` root: `https://alimobiny.github.io/start-to-study/`. Note the Pages origin has its own empty localStorage — migrate data with backup/restore; the user accepted that the repo contents (shift names, schedule, docs) are publicly viewable at that URL.
 
 ### Reminder UI per activity
 
