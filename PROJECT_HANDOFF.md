@@ -86,6 +86,7 @@ Files in this package:
 
 - `index.html` — merged dashboard + Stage A schedule editor and in-page reminder engine.
 - `run_dashboard.py` — local HTTP server using Python Standard Library, bound only to `127.0.0.1:8765`. Restored on 2026-11-20 (it was missing from the export that reached this machine, which broke the launcher); supports `--no-browser` for automated checks, and reuses an already-running instance instead of erroring.
+- **The server is optional for daily use.** `index.html` is fully self-contained (verified: zero external references) and runs from `file://` — double-click on Windows, or copy the single file to a phone for view-only use. The schedule itself (shifts, capacities, calendar) is embedded in the file. Caveats: `file://` and `http://127.0.0.1:8765` are different storage buckets (migrate with backup/restore), and the Stage B notification path was verified via the server origin. The server also remains the base for any future PWA/service-worker work, which cannot register from `file://`.
 - `اجرای_داشبورد.bat` — Windows launcher (unchanged; calls `py run_dashboard.py`).
 - `tests/run-tests.mjs` — reproducible Node-only regression suite: extracts the inline script, runs `node --check`, executes it in a `vm` sandbox with DOM/localStorage shims and a controllable clock, and asserts shift/reminder logic. No browser, no downloads, ~1 s.
 - `run_tests.bat` — one-click Windows runner for the suite.
