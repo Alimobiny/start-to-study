@@ -1,0 +1,26 @@
+{
+  "name": "روتین و دستیاری",
+  "short_name": "روتین",
+  "description": "داشبورد شخصی روتین روزانه و برنامه مطالعه",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f5ed",
+  "theme_color": "#10261f",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

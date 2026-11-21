@@ -470,6 +470,97 @@ test('save() persists reminder settings through the storage adapter', () => {
     'reminder config lost in persistence');
 });
 
+// ---------------------------------------------------- Stage C: PWA packaging
+
+test('manifest is valid JSON with all install-required fields', () => {
+  const manifestPath = path.join(rootDir, 'manifest.webmanifest');
+  const m = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert(m.name === 'روتین و دستیاری', `display name mismatch: ${m.name}`);
+  assert(typeof m.short_name === 'string' && m.short_name.length > 0, 'short_name missing');
+  assert(m.dir === 'rtl' && m.lang === 'fa', 'manifest should be rtl fa');
+  assert(m.display === 'standalone', 'display must be standalone');
+  assert(typeof m.start_url === 'string' && m.start_url.includes('index.html'), 'start_url wrong');
+  assert(typeof m.scope === 'string' && typeof m.theme_color === 'string', 'scope/theme_color missing');
+  const sizes = m.icons.map(i => i.sizes);
+  assert(sizes.includes('192x192'), '192px icon entry missing');
+  assert(sizes.includes('512x512'), '512px icon entry missing');
+});
+
+test('manifest icons exist on disk as real PNGs with matching dimensions', () => {
+  const m = JSON.parse(fs.readFileSync(path.join(rootDir, 'manifest.webmanifest'), 'utf8'));
+  for (const icon of m.icons) {
+    const iconPath = path.join(rootDir, icon.src);
+    assert(fs.existsSync(iconPath), `icon file missing: ${icon.src}`);
+    const buf = fs.readFileSync(iconPath);
+    assert(buf.slice(0, 8).toString('hex') === '89504e470d0a1a0a', `${icon.src} is not a PNG`);
+    const [w, h] = icon.sizes.split('x').map(Number);
+    assert(buf.readUInt32BE(16) === w, `${icon.src} width ${buf.readUInt32BE(16)} != ${w}`);
+    assert(buf.readUInt32BE(20) === h, `${icon.src} height ${buf.readUInt32BE(20)} != ${h}`);
+  }
+});
+
+test('index.html links the manifest and registers the SW behind a protocol guard', () => {
+  assert(html.includes('<link rel="manifest" href="manifest.webmanifest">'), 'manifest link missing');
+  assert(html.includes("navigator.serviceWorker.register('sw.js')"), 'SW registration missing');
+  assert(html.includes("location.protocol === 'https:'"), 'registration must be guarded to http(s)');
+});
+
+test('sw.js passes node --check', () => {
+  const swPath = path.join(rootDir, 'sw.js');
+  const res = spawnSync(process.execPath, ['--check', swPath], { encoding: 'utf8' });
+  assert(res.status === 0, `node --check failed for sw.js:\n${res.stderr}`);
+});
+
+test('sw install precaches the shell; activate cleans old cache versions', async () => {
+  const swCode = fs.readFileSync(path.join(rootDir, 'sw.js'), 'utf8');
+  const added = [];
+  const deleted = [];
+  let claimed = false;
+  const listeners = {};
+  const cacheMock = {
+    addAll: (urls) => { added.push(...urls); return Promise.resolve(); },
+    put: async () => {},
+    match: async () => undefined,
+  };
+  const swSandbox = {
+    caches: {
+      open: async () => cacheMock,
+      keys: async () => ['toloe-aram-pwa-v1', 'toloe-aram-pwa-v0', 'toloe-aram-pwa-v0-old'],
+      delete: async (key) => { deleted.push(key); return true; },
+    },
+    location: { origin: 'http://127.0.0.1:8765' },
+    fetch: async () => { throw new Error('offline'); },
+    URL,
+    console,
+  };
+  swSandbox.self = {
+    addEventListener: (type, fn) => { listeners[type] = fn; },
+    skipWaiting: () => Promise.resolve(),
+    clients: { claim: async () => { claimed = true; } },
+  };
+  vm.createContext(swSandbox);
+  vm.runInContext(swCode, swSandbox, { filename: 'sw.js' });
+
+  assert(typeof listeners.install === 'function', 'install handler missing');
+  assert(typeof listeners.activate === 'function', 'activate handler missing');
+  assert(typeof listeners.fetch === 'function', 'fetch handler missing');
+
+  const waiters = [];
+  const eventMock = { waitUntil: (p) => waiters.push(p) };
+  listeners.install(eventMock);
+  listeners.activate(eventMock);
+  await Promise.all(waiters);
+  await new Promise(resolve => setTimeout(resolve, 10));
+
+  for (const url of ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png']) {
+    assert(added.includes(url), `shell asset not precached: ${url}`);
+  }
+  assert(deleted.includes('toloe-aram-pwa-v0') && deleted.includes('toloe-aram-pwa-v0-old'),
+    'old cache versions must be deleted');
+  assert(!deleted.includes('toloe-aram-pwa-v1'), 'current cache must survive activate');
+  assert(claimed === true, 'activate should claim clients');
+});
+
 // ------------------------------------------------------------------- report
 
 clearNow();

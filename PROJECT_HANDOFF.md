@@ -78,7 +78,7 @@ Previous HTML builds failed because of JavaScript Temporal Dead Zone issues:
 
 These caused the dashboard not to render or not to start. The current Stage A release has those initialization problems addressed. Do not copy code from earlier broken HTML versions unless necessary; use the `index.html` in this package as the current source of truth.
 
-## 7. Current release: Stage A + Stage B implemented
+## 7. Current release: Stage A + Stage B + Stage C implemented
 
 The latest print schedule artifacts produced earlier in the project are also available as a four-week, single-page A4 RTL Word/PDF template using B Nazanin. Current Stage A work only modifies the HTML dashboard; do not unnecessarily regenerate those Word/PDF files unless requested.
 
@@ -86,10 +86,14 @@ Files in this package:
 
 - `index.html` — merged dashboard + Stage A schedule editor and in-page reminder engine.
 - `run_dashboard.py` — local HTTP server using Python Standard Library, bound only to `127.0.0.1:8765`. Restored on 2026-11-20 (it was missing from the export that reached this machine, which broke the launcher); supports `--no-browser` for automated checks, and reuses an already-running instance instead of erroring.
-- **The server is optional for daily use.** `index.html` is fully self-contained (verified: zero external references) and runs from `file://` — double-click on Windows, or copy the single file to a phone for view-only use. The schedule itself (shifts, capacities, calendar) is embedded in the file. Caveats: `file://` and `http://127.0.0.1:8765` are different storage buckets (migrate with backup/restore), and the Stage B notification path was verified via the server origin. The server also remains the base for any future PWA/service-worker work, which cannot register from `file://`.
+- **The server is optional for daily use.** `index.html` is fully self-contained (verified: zero external references) and runs from `file://` — double-click on Windows, or copy the single file to a phone for view-only use. The schedule itself (shifts, capacities, calendar) is embedded in the file. Caveats: `file://` and `http://127.0.0.1:8765` are different storage buckets (migrate with backup/restore), and the Stage B notification path was verified via the server origin. The server is required once for PWA install (Stage C) and afterwards only to deliver updates; the installed app launches offline from the service-worker cache. Service workers cannot register from `file://` — the registration in `index.html` is protocol-guarded and skipped there.
 - `اجرای_داشبورد.bat` — Windows launcher (unchanged; calls `py run_dashboard.py`).
-- `tests/run-tests.mjs` — reproducible Node-only regression suite: extracts the inline script, runs `node --check`, executes it in a `vm` sandbox with DOM/localStorage shims and a controllable clock, and asserts shift/reminder logic. No browser, no downloads, ~1 s.
+- `tests/run-tests.mjs` — reproducible Node-only regression suite: extracts the inline script, runs `node --check`, executes it in a `vm` sandbox with DOM/localStorage/Notification shims and a controllable clock, and asserts shift/reminder/notification logic plus the PWA manifest and service-worker behaviour. No browser, no downloads, ~1 s.
 - `run_tests.bat` — one-click Windows runner for the suite.
+- `manifest.webmanifest` — PWA manifest (Stage C): name «روتین و دستیاری», rtl/fa, standalone display, `start_url ./index.html`, 192/512 icons.
+- `sw.js` — service worker (Stage C): versioned cache `toloe-aram-pwa-v1`; precached shell; network-first for navigations (updates flow when the server runs), cache-first for other same-origin assets; activate prunes old cache versions. **Rule: bump the `CACHE` string whenever `index.html` or a shell asset changes.**
+- `icons/icon-192.png`, `icons/icon-512.png` — generated sunrise icons; regenerate with `py tools/make-icons.py` (pure stdlib).
+- `tools/make-icons.py` — icon generator (zlib/struct PNG writer, no image packages).
 - `.gitignore` — version-control exclusions (Python cache, test tmp, `node_modules/`, tooling workspace).
 - `README_FA.md` — Persian setup/use guide.
 - `PROJECT_HANDOFF.md` — this project context.
@@ -167,12 +171,13 @@ UI additions:
 Two layers:
 
 1. **Local reproducible suite (run before/after every change):**
-   `node tests/run-tests.mjs` — **21/21 passed** on the user's Windows machine (2026-11-20).
+   `node tests/run-tests.mjs` — **26/26 passed** on the user's Windows machine (2026-11-21).
    Covers script syntax, initial state shape, all seven shift intervals incl. overnight spans,
    end-exclusive boundaries, free-interval checks, reminder firing/dedup/shift-suppression/
    done-skip/global-pause, Stage B system-notification fire/off/denied/missing-API/permission-button
    paths, backup schemaVersion-4 payload, restore preserving the notification preference,
-   and persistence round-trip.
+   persistence round-trip, and Stage C manifest/install-fields/icon-PNG/protocol-guard/
+   service-worker install+activate behaviour.
 2. **Prior browser-level run (container, 2026-11):** **19/19 passed** — details in `TEST_REPORT.md`.
 
 Covered:
@@ -206,11 +211,6 @@ Test environment note: browser navigation to container-local URLs was blocked by
 ## 11. Next steps / possible future stages
 
 These are options, not authorization to implement automatically:
-
-### Stage C — PWA packaging
-
-- Add `manifest.webmanifest`, icons, install instructions and service worker for app shell/offline assets.
-- PWA installation alone does not provide reliable scheduled local notifications across all browsers.
 
 ### Stage D — Web Push, closed-browser and cross-device
 

@@ -13,6 +13,10 @@ import webbrowser
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import mimetypes
+
+# Default handlers may not know the web-app manifest type:
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 HOST = "127.0.0.1"
 PORT = 8765
